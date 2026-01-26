@@ -1,0 +1,48 @@
+# Ambientes virtuais
+venv
+env
+.venv
+**/venv/ 
+**/venv
+
+# Arquivos compilados
+*.pyc
+*.pyo
+*.pyd
+**/*.pyc
+**/*.pyo
+**/__pycache__/ 
+**/__pycache__
+__pycache__
+
+# Arquivos temporários
+*.log
+*.tmp
+*.bak
+
+# Sistema de build do Python
+*.egg-info/
+dist/
+build/
+eggs/
+develop-eggs/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# pastas que não devem ser versionadas
+**/Sample_postprocess/ 
+**/Sample_postprocess
+
+**/Plane_plots/ 
+**/Plane_plots
+
+**/data/ 
+**/data
+
+**/Preprocess/
+**/Preprocess
+
+**/src/simulations/
+**/src/simulations

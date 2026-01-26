@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "0_cm_rs"
+version = "0.1.0"
+description = ""
+authors = [{name = "Guilherme Neves Marchi", email = "g.marchi@rwth-aachen.de"}]
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+# Configuração para achar os pacotes dentro de 'src'
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
