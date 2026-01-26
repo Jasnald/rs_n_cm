@@ -1,4 +1,4 @@
-from importations import *
+from ..importations import *
 
 from .fitter import Fitter
 from .mesher import MeshGenerator

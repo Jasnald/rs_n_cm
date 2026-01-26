@@ -1,5 +1,5 @@
 # Arquivo: src/exp_process/pipeline/surface.py
-from importations import *
+from ..importations import *
 
 from .base import BasePipeline
 from ..core.fitter import Fitter

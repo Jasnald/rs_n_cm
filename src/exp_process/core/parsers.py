@@ -1,4 +1,4 @@
-from importations import *
+from ..importations import *
 
 def parse_exp1_format(filepath: str) -> dict:
 

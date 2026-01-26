@@ -1,4 +1,4 @@
-from importations import *
+from ..importations import *
 
 
 class MeshGenerator:

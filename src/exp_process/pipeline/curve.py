@@ -1,4 +1,4 @@
-from importations import *
+from ..importations import *
 
 from .base import BasePipeline
 from ..core.fitter import Fitter
