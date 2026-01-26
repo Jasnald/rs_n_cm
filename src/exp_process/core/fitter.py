@@ -65,3 +65,30 @@ class Fitter:
             "degree": degree,
             "coeffs": coeffs.tolist()
         }
+
+    @staticmethod
+    def eval_2d_poly(x: np.ndarray, y: np.ndarray, model: dict) -> np.ndarray:
+        """
+        Reconstrói Z a partir de X, Y e Coeficientes.
+        Essencial para o 'Rebuild' (s5) e 'Residuals' (s4).
+        """
+        degree = model['degree']
+        coeffs = model['coeffs']
+        
+        z = np.zeros_like(x, dtype=float)
+        
+        # Lógica DEVE ser a inversa exata da matriz de design usada no fit_2d
+        # Exemplo baseado no seu código anterior (potências independentes):
+        # Design: [x^1, y^1, x^2, y^2, ... , 1]
+        
+        idx = 0
+        for k in range(1, degree + 1):
+            z += coeffs[idx] * (x**k)
+            idx += 1
+            z += coeffs[idx] * (y**k)
+            idx += 1
+            
+        # O último coeficiente é o termo constante (intercepto)
+        z += coeffs[-1]
+        
+        return z
