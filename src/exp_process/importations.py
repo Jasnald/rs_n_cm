@@ -12,6 +12,8 @@ import json
 # gui
 
 import glob
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import tkinter as tk
