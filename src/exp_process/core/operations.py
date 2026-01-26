@@ -1,36 +1,42 @@
 import numpy as np
 
-class SurfaceOps:
-    @staticmethod
-    def calculate_residuals(x, y, z_measured, fit_model):
-        """
-        Calcula (Z_medido - Z_modelo). 
-        Isso é essencial para encontrar a rugosidade/imperfeição da superfície.
-        """
-        # 1. Calcular Z teórico usando o modelo
-        # (Idealmente chamar Fitter.predict, vou simular aqui)
-        # z_model = Fitter.predict(x, y, fit_model)
-        
-        # Placeholder para z_model (assumindo que já temos ou calculamos)
-        z_model = np.zeros_like(z_measured) 
-        
-        # 2. Subtrair
-        residuals = z_measured - z_model
-        
-        # Métricas básicas
-        metrics = {
-            "max_peak": np.max(residuals),
-            "max_valley": np.min(residuals),
-            "rms": np.sqrt(np.mean(residuals**2))
-        }
-        
-        return residuals, metrics
+class ModelOps:
+    """Manipulação algébrica de modelos ajustados."""
 
     @staticmethod
-    def subtract_planes(plane_a_model, plane_b_model):
+    def subtract_coeffs(model_a: dict, model_b: dict) -> dict:
         """
-        Subtrai matematicamente dois modelos de plano (Coef A - Coef B).
-        Útil para remover o tilt (Plano grau 1) da superfície real (Plano grau N).
+        Calcula Modelo_C = Modelo_A - Modelo_B subtraindo coeficientes.
+        Exige que ambos sejam do mesmo tipo e grau.
         """
-        # Requer alinhamento dos graus dos coeficientes
-        pass
+        if model_a['type'] != model_b['type'] or model_a['degree'] != model_b['degree']:
+            raise ValueError("Modelos incompatíveis para subtração direta.")
+
+        coeffs_a = np.array(model_a['coeffs'])
+        coeffs_b = np.array(model_b['coeffs'])
+        
+        return {
+            "type": model_a['type'],
+            "degree": model_a['degree'],
+            "coeffs": (coeffs_a - coeffs_b).tolist(),
+            "norm": model_a.get("norm") # Assume mesma normalização se existir
+        }
+
+    @staticmethod
+    def average_models(models: list) -> dict:
+        """
+        Calcula a média de uma lista de modelos (coeffs).
+        """
+        if not models: return {}
+        base = models[0]
+        
+        # Empilha coeficientes: Shape (N_modelos, N_coeffs)
+        all_coeffs = np.vstack([np.array(m['coeffs']) for m in models])
+        avg_coeffs = np.mean(all_coeffs, axis=0)
+        
+        return {
+            "type": base['type'],
+            "degree": base['degree'],
+            "coeffs": avg_coeffs.tolist(),
+            "norm": base.get("norm")
+        }

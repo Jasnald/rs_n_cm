@@ -1,73 +1,58 @@
 import numpy as np
-import logging
-# Requer: pip install shapely
 from shapely.geometry import Polygon, Point
 
 class MeshGenerator:
-    """
-    Recria a lógica de 'Rebuild' do s5: Gera um grid regular 
-    dentro de uma geometria definida (ex: retângulo ou T-shape).
-    """
-    
+    """Gera nuvens de pontos (grids) baseadas em geometrias."""
+
     @staticmethod
-    def generate_rectangular_grid(
-        x_min, x_max, y_min, y_max, 
-        step_x=0.5, step_y=0.5
-    ):
+    def rectangular_grid(width: float, height: float, step: float) -> tuple:
         """
-        Gera uma malha retangular simples (para Exp2 ou testes).
-        Retorna: (X_grid, Y_grid) em formato meshgrid 1D (flattened).
+        Gera grid retangular (para Exp2 ou testes).
+        Retorna: (x_flat, y_flat)
         """
-        xs = np.arange(x_min, x_max + step_x, step_x)
-        ys = np.arange(y_min, y_max + step_y, step_y)
-        
-        # Cria malha 2D e achata para lista de pontos
-        X, Y = np.meshgrid(xs, ys)
+        x = np.arange(0, width + step, step)
+        y = np.arange(0, height + step, step)
+        X, Y = np.meshgrid(x, y)
         return X.flatten(), Y.flatten()
 
     @staticmethod
-    def generate_t_shape_grid(
-        bounds_dict, 
-        step=0.5
-    ):
+    def t_shape_grid(dims: dict, step: float) -> tuple:
         """
-        Gera malha baseada em limites complexos (lógica do Shapely antiga).
-        bounds_dict: {'x_min': ..., 'x_max': ..., etc}
+        Gera grid em formato 'T' usando Shapely (para Exp1).
+        dims: {h_width, h_thickness, v_width, v_height, offset_1, ...}
         """
-        # Exemplo simplificado de geometria T. 
-        # No código real, você montaria o Polygon com as coordenadas exatas.
-        p1 = (bounds_dict['x_min'], bounds_dict['y_min'])
-        p2 = (bounds_dict['x_max'], bounds_dict['y_max'])
-        # ... definir vértices do T ...
+        # 1. Define Polígonos
+        # Barra Horizontal
+        h_poly = Polygon([
+            (0, 0), (dims['h_width'], 0),
+            (dims['h_width'], dims['h_thickness']), (0, dims['h_thickness'])
+        ])
         
-        # Por enquanto, retornamos um retangulo bounding box para não quebrar
-        return MeshGenerator.generate_rectangular_grid(
-            bounds_dict['x_min'], bounds_dict['x_max'],
-            bounds_dict['y_min'], bounds_dict['y_max'],
-            step, step
-        )
-
-    @staticmethod
-    def project_z(x_grid, y_grid, fit_model):
-        """
-        Calcula o Z para cada ponto da malha usando os coeficientes do modelo.
-        """
-        coeffs = np.array(fit_model['coeffs'])
-        degree = fit_model['degree']
+        # Barra Vertical (centralizada ou com offset)
+        v_x_start = dims.get('offset_1', (dims['h_width'] - dims['v_width'])/2)
+        v_poly = Polygon([
+            (v_x_start, dims['h_thickness']),
+            (v_x_start + dims['v_width'], dims['h_thickness']),
+            (v_x_start + dims['v_width'], dims['h_thickness'] + dims['v_height']),
+            (v_x_start, dims['h_thickness'] + dims['v_height'])
+        ])
         
-        # Reconstrói Z baseado na equação polinomial 2D (mesma lógica do Fitter)
-        z_grid = np.zeros_like(x_grid)
+        # 2. Une (Union)
+        t_shape = h_poly.union(v_poly)
         
-        # Lógica deve espelhar exatamente o Fitter.fit_2d_poly
-        # Se usou [1, x, y, x^2, y^2...], deve reconstruir igual.
-        idx = 0
-        for i in range(len(x_grid)):
-            row_val = 0
-            # Se fit_2d_poly usou a ordem "row.append(x**k); row.append(y**k)" + intercepto no final:
-            current_coeff_idx = 0
+        # 3. Gera Grid Bounding Box e Filtra
+        min_x, min_y, max_x, max_y = t_shape.bounds
+        x_range = np.arange(min_x, max_x + step, step)
+        y_range = np.arange(min_y, max_y + step, step)
+        
+        valid_points = []
+        for x in x_range:
+            for y in y_range:
+                if t_shape.contains(Point(x, y)):
+                    valid_points.append((x, y))
+                    
+        if not valid_points:
+            return np.array([]), np.array([])
             
-            # Recalcula termos (Isso precisa estar 100% alinhado com o fitter.py)
-            # Idealmente, o Fitter deveria ter um método 'predict(x, y)' para evitar duplicação aqui.
-            pass 
-            
-        return z_grid
+        pts = np.array(valid_points)
+        return pts[:, 0], pts[:, 1]
