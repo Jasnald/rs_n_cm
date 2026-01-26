@@ -1,4 +1,4 @@
-import numpy as np
+from importations import *
 
 class Fitter:
     """Centraliza algoritmos de ajuste de curvas e superfícies."""

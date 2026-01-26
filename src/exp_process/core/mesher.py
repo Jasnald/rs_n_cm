@@ -1,5 +1,5 @@
-import numpy as np
-from shapely.geometry import Polygon, Point
+from importations import *
+
 
 class MeshGenerator:
     """Gera nuvens de pontos (grids) baseadas em geometrias."""

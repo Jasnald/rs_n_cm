@@ -1,4 +1,4 @@
-import numpy as np
+from importations import *
 
 class ModelOps:
     """Manipulação algébrica de modelos ajustados."""

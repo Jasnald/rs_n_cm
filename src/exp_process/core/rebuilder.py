@@ -1,4 +1,5 @@
-import numpy as np
+from importations import *
+
 from .fitter import Fitter
 from .mesher import MeshGenerator
 
