@@ -2,7 +2,6 @@ from importations import *
 
 class ModelOps:
 
-
     @staticmethod
     def subtract_coeffs(model_a: dict, model_b: dict) -> dict:
 
@@ -16,7 +15,7 @@ class ModelOps:
             "type": model_a['type'],
             "degree": model_a['degree'],
             "coeffs": (coeffs_a - coeffs_b).tolist(),
-            "norm": model_a.get("norm") # Assume mesma normalização se existir
+            "norm": model_a.get("norm")
         }
 
     @staticmethod
