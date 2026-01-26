@@ -66,7 +66,7 @@ class SurfacePipeline:
                     merged = np.vstack([data_bottom, data_wall])
                     combined_points.append(merged)
                 
-                
+
             if not combined_points:
                 continue
 
@@ -116,23 +116,29 @@ class SurfacePipeline:
 
         for fname in all_files:
             match = pattern.search(fname)
-            if match:
-                side, meas, type_ = match.groups()
-                key = (side, meas)
-                
-                if key not in temp_map:
-                    temp_map[key] = {}
-                
-                temp_map[key][type_] = fname
 
-        # Converte para o formato final
+            if not match: continue
+                
+            side, meas, type_ = match.groups()
+            key = (side, meas)
+            
+            if key not in temp_map:
+                temp_map[key] = {}
+            
+            temp_map[key][type_] = fname
+
+        # Convert to final format
         for (side, meas), files in temp_map.items():
-            if 'bottom' in files and 'wall' in files:
-                if side not in mapped:
-                    mapped[side] = []
-                mapped[side].append(files)
-            else:
-                logger.warning(f"Par incompleto para {side}/{meas}: {files}")
+            
+            # Guard Clause 2: Handle incomplete pairs immediately
+            if 'bottom' not in files or 'wall' not in files:
+                logger.warning(f"Incomplete pair for {side}/{meas}: {files}")
+                continue
+
+            # Happy Path
+            if side not in mapped:
+                mapped[side] = []
+            mapped[side].append(files)
         
         return mapped
 
