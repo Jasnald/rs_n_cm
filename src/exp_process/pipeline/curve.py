@@ -4,8 +4,9 @@ from .base import BasePipeline
 from ..core.fitter import Fitter
 
 class CurvePipeline(BasePipeline):
+
     def __init__(self, input_dir, output_dir):
-        # Configura pasta de saída específica
+
         super().__init__(input_dir, output_dir, subfolder="curve_data")
 
     def map_files(self) -> dict:
@@ -22,7 +23,7 @@ class CurvePipeline(BasePipeline):
         return mapped
 
     def load_and_process_data(self, files):
-        # Validação específica de Curva
+
         if 'L' not in files or 'R' not in files:
             return None # Ou levantar warning
 
@@ -32,11 +33,10 @@ class CurvePipeline(BasePipeline):
         if data_l.shape != data_r.shape:
             raise ValueError("L/R shapes mismatch")
             
-        # Lógica específica: Média Simples
         return (data_l + data_r) / 2.0
 
     def fit_model(self, points, degree):
-        # Lógica específica: Fit 1D
+
         x = points[:, 0]
         z = points[:, 1]
         return Fitter.fit_1d_poly(x, z, degree)

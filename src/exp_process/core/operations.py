@@ -1,14 +1,11 @@
 from importations import *
 
 class ModelOps:
-    """Manipulação algébrica de modelos ajustados."""
+
 
     @staticmethod
     def subtract_coeffs(model_a: dict, model_b: dict) -> dict:
-        """
-        Calcula Modelo_C = Modelo_A - Modelo_B subtraindo coeficientes.
-        Exige que ambos sejam do mesmo tipo e grau.
-        """
+
         if model_a['type'] != model_b['type'] or model_a['degree'] != model_b['degree']:
             raise ValueError("Modelos incompatíveis para subtração direta.")
 
@@ -24,13 +21,10 @@ class ModelOps:
 
     @staticmethod
     def average_models(models: list) -> dict:
-        """
-        Calcula a média de uma lista de modelos (coeffs).
-        """
+
         if not models: return {}
         base = models[0]
-        
-        # Empilha coeficientes: Shape (N_modelos, N_coeffs)
+
         all_coeffs = np.vstack([np.array(m['coeffs']) for m in models])
         avg_coeffs = np.mean(all_coeffs, axis=0)
         

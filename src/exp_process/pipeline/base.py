@@ -14,8 +14,7 @@ class BasePipeline(ABC):
 
     def run(self, degrees=[1]):
         logger.info(f"Iniciando pipeline em: {self.input_dir}")
-        
-        # 1. Passo Abstrato: Quem define COMO buscar é a filha
+
         items_map = self.map_files() 
         
         if not items_map:
@@ -24,19 +23,16 @@ class BasePipeline(ABC):
 
         for key_id, files in items_map.items():
             logger.info(f"Processando item: {key_id}")
-            
-            # 2. Passo Abstrato: Carregar, Fundir, Limpar
+
             try:
                 points = self.load_and_process_data(files)
-                
-                # Guard clauses genéricos
+
                 if points is None or len(points) == 0:
                     logger.warning(f"  Dados vazios para {key_id}. Pulando.")
                     continue
-                
-                # 3. Loop de Ajuste (Comum a todos)
+
                 for degree in degrees:
-                    # Passo Abstrato: Fit 1D ou 2D?
+
                     model = self.fit_model(points, degree)
                     
                     self._save_standard_result(key_id, points, model, degree)
@@ -46,7 +42,7 @@ class BasePipeline(ABC):
                 continue
 
     def _save_standard_result(self, key_id, points, model, degree):
-        """Salva padronizado. Ninguém precisa reescrever isso."""
+
         filename = f"{key_id}_Degree{degree}_Processed.json"
         path = os.path.join(self.output_dir, filename)
         
@@ -57,8 +53,6 @@ class BasePipeline(ABC):
             "fit_model": model
         }
         save_json(payload, path)
-
-    # --- Métodos que as filhas SÃO OBRIGADAS a implementar ---
     
     @abstractmethod
     def map_files(self) -> dict:

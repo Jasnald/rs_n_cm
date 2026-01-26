@@ -2,14 +2,10 @@ from importations import *
 
 
 class MeshGenerator:
-    """Gera nuvens de pontos (grids) baseadas em geometrias."""
 
     @staticmethod
     def rectangular_grid(width: float, height: float, step: float) -> tuple:
-        """
-        Gera grid retangular (para Exp2 ou testes).
-        Retorna: (x_flat, y_flat)
-        """
+
         x = np.arange(0, width + step, step)
         y = np.arange(0, height + step, step)
         X, Y = np.meshgrid(x, y)
@@ -17,18 +13,12 @@ class MeshGenerator:
 
     @staticmethod
     def t_shape_grid(dims: dict, step: float) -> tuple:
-        """
-        Gera grid em formato 'T' usando Shapely (para Exp1).
-        dims: {h_width, h_thickness, v_width, v_height, offset_1, ...}
-        """
-        # 1. Define Polígonos
-        # Barra Horizontal
+
         h_poly = Polygon([
             (0, 0), (dims['h_width'], 0),
             (dims['h_width'], dims['h_thickness']), (0, dims['h_thickness'])
         ])
-        
-        # Barra Vertical (centralizada ou com offset)
+
         v_x_start = dims.get('offset_1', (dims['h_width'] - dims['v_width'])/2)
         v_poly = Polygon([
             (v_x_start, dims['h_thickness']),
@@ -36,11 +26,9 @@ class MeshGenerator:
             (v_x_start + dims['v_width'], dims['h_thickness'] + dims['v_height']),
             (v_x_start, dims['h_thickness'] + dims['v_height'])
         ])
-        
-        # 2. Une (Union)
+
         t_shape = h_poly.union(v_poly)
-        
-        # 3. Gera Grid Bounding Box e Filtra
+
         min_x, min_y, max_x, max_y = t_shape.bounds
         x_range = np.arange(min_x, max_x + step, step)
         y_range = np.arange(min_y, max_y + step, step)
