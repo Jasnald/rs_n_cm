@@ -61,23 +61,19 @@ def main():
             print(f"   Aviso: Sem pontos válidos para {side}.")
             continue
 
-        # 2. Ajuste do Modelo (Fit) - Grau 2 (Polinômio quadrático padrão)
-        try:
+        if points is not None:
             model = pipeline.fit_model(points, degree=2)
-            
-            # Adiciona metadados extras para identificação
             model['side'] = side
-            model['type'] = 'surface_poly'
             
-            # 3. Salvar JSON
+            # --- ADIÇÃO: Salvar os pontos junto com o modelo ---
+            # Convertendo para lista para ser compatível com JSON
+            model['points'] = points.tolist() 
+            # ---------------------------------------------------
+
             save_path = os.path.join(surface_output_dir, f"{side}.json")
             io_utils.save_json(model, save_path)
-            
             generated_models.append(side)
             print(f"   Sucesso! Modelo salvo em: {save_path}")
-            
-        except Exception as e:
-            print(f"   Erro ao ajustar modelo para {side}: {e}")
 
     # ---------------------------------------------------------
     # ETAPA 2: Comparação (Subtração Exemplo)

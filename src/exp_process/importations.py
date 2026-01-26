@@ -3,6 +3,7 @@
 import numpy as np
 import re
 import os
+import sys
 from shapely.geometry import Polygon, Point
 import logging
 from abc import ABC, abstractmethod
@@ -16,3 +17,5 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 import tkinter as tk
 from tkinter import ttk, messagebox
 from collections import Counter
+
+sys.dont_write_bytecode = True
