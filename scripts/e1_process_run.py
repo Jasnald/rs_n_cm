@@ -18,7 +18,7 @@ sys.path.append(os.path.abspath(src_path))
 from exp_process.pipeline.surface import SurfacePipeline
 from exp_process.core.segmenter import StepSegmenter
 from exp_process.core.fitter import Fitter
-from exp_process.core.operations import ModelOps # Importante!
+from exp_process.core.operations import ModelOps
 from exp_process.utils.io import IOUtils
 from exp_process.gui.viewer import PointCloudViewer
 from exp_process.core.transformer import DataTransformer
