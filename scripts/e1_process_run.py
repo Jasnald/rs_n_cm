@@ -22,6 +22,7 @@ from exp_process.core.operations import ModelOps # Importante!
 from exp_process.utils.io import IOUtils
 from exp_process.gui.viewer import PointCloudViewer
 from exp_process.core.transformer import DataTransformer
+from processor import ExpProcessor
 
 # Configurações Globais
 INPUT_DIR = os.path.join(project_root, "data", "input", "exp1")
@@ -31,12 +32,21 @@ HIGH_DEGREE = 4 # Grau detalhado
 LOW_DEGREE = 1  # Grau para remover inclinação
 IO = IOUtils()
 
+sample_path = os.path.join(project_root, "data", "input", "exp1", "exp1_sample01.py")
+    
+print(f">> Lendo medições de: {os.path.basename(sample_path)}")
+dimensoes_reais = ExpProcessor.process(sample_path)
+largura_base = dimensoes_reais.get('h_width')
+
 DATA_FIX_RULES = {
     "Side2": {
-        "mirror_x": True,  # Corrige o espelhamento do eixo
-        "invert_z": False  # Altere para True se necessário
+        "mirror_x": True,
+        "mirror_ref": largura_base,
+        "invert_z": False
     }
 }
+
+
 
 def step1_preprocess_and_segment():
     print("\n=== ETAPA 1: PRE-PROCESSAMENTO E SEGMENTAÇÃO ===")
@@ -117,7 +127,7 @@ def step3_fitting_and_flattening(sides_list):
         points_np = np.array(all_points)
         
         if len(points_np) < 10: continue
-        
+
         print(f"   [Transform] Verificando regras para {side}...")
         points_np = transformer.apply(side, points_np)
 

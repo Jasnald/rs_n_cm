@@ -28,8 +28,8 @@ class DataTransformer:
         
         # 1. Espelhamento em X (Espelho em relação ao MAX ou centro)
         if config.get("mirror_x"):
-            # x_new = x_max - x_atual (Inverte a direção do eixo X)
-            pts[:, 0] = pts[:, 0].max() - pts[:, 0]
+                ref_value = config["mirror_ref"]
+                pts[:, 0] = ref_value - pts[:, 0]
             
         # 2. Inversão de Z (Multiplica por -1)
         if config.get("invert_z"):

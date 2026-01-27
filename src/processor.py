@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os, sys
 
 class ExpProcessor(object):
     
@@ -45,3 +46,47 @@ class ExpProcessor(object):
             "avg_height": avg.get("height", 0),
             "avg_cut":    avg.get("cut", 0)
         }
+    
+    @staticmethod
+    def process(filepath):
+        """Método que faltava: Carrega o arquivo e chama o processador correto."""
+        data = ExpProcessor.load_data_module(filepath)
+        if not data:
+            return {}
+            
+        dtype = data.get("type")
+        
+        if dtype == "t_shape":
+            return ExpProcessor.process_t_shape(data)
+        elif dtype == "block_shape":
+            return ExpProcessor.process_block_shape(data)
+        else:
+            print("Tipo desconhecido: %s" % dtype)
+            return {}
+        
+    @staticmethod
+    def load_data_module(filepath):
+        """Carrega o arquivo .py como um módulo e extrai 'data'."""
+        if not os.path.exists(filepath):
+            print("ERRO: Arquivo nao encontrado: %s" % filepath)
+            return None
+
+        folder = os.path.dirname(filepath)
+        filename = os.path.basename(filepath)
+        module_name = filename.replace('.py', '')
+
+        if folder not in sys.path:
+            sys.path.append(folder)
+
+        try:
+            mod = __import__(module_name)
+            # Garante reload para pegar alterações recentes
+            if sys.version_info[0] >= 3:
+                import importlib
+                importlib.reload(mod)
+            else:
+                reload(mod)
+            return getattr(mod, 'data', None)
+        except Exception as e:
+            print("Erro ao carregar modulo %s: %s" % (filepath, str(e)))
+            return None
