@@ -3,7 +3,9 @@ from ..importations import *
 
 from .base import BasePipeline
 from ..core.fitter import Fitter
+from ..core.segmenter import StepSegmenter
 from ..core.cleaner import OutlierCleaner
+from ..utils.io import save_json
 
 class SurfacePipeline(BasePipeline):
 
@@ -34,6 +36,33 @@ class SurfacePipeline(BasePipeline):
             mapped[side].append(files)
         
         return mapped
+    
+    def process_and_save_steps(self, key_id, points):
+        # 1. Segmentar
+        steps_list = StepSegmenter.find_steps(points, threshold_percent=0.6)
+        
+        # 2. Estruturar para salvar (formato similar ao antigo)
+        steps_data = {
+            "id": key_id,
+            "total_steps": len(steps_list),
+            "steps": []
+        }
+
+        for i, step_points in enumerate(steps_list):
+            steps_data["steps"].append({
+                "step_number": i + 1,
+                "point_count": len(step_points),
+                "mean_x": float(np.mean(step_points[:, 0])),
+                # Convertendo para lista para serialização JSON
+                "points": step_points.tolist() 
+            })
+
+        # 3. Salvar
+        filename = f"{key_id}_Steps.json"
+        path = os.path.join(self.output_dir, filename)
+        save_json(steps_data, path)
+        
+        return steps_list
 
     def load_and_process_data(self, measurements_list):
         all_points = []

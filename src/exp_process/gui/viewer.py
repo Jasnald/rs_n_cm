@@ -1,29 +1,34 @@
 from ..importations import *
 
 from ..core.fitter import Fitter
+
+
 class PointCloudViewer:
     def __init__(self, root, input_dir):
         self.root = root
-        self.root.title("Editor Interativo de Pontos (Clique para Deletar)")
+        self.root.title("Visualizador e Editor de Dados (YZ)")
         self.root.geometry("1200x800")
         
         self.input_dir = input_dir
-        self.data_by_side = {}
-        self.current_side = None
-        self.modified = False # Flag para saber se houve alterações
+        # Estrutura de armazenamento: { filename: { 'data': json_dict, 'type': 'steps'|'flat'|'model', 'path': str } }
+        self.data_store = {} 
+        self.current_file = None
+        self.current_step_idx = None # Índice do passo selecionado (ou None para Flat)
+        self.modified = False
         
         self._setup_ui()
         self.load_files()
         
     def _setup_ui(self):
+        # --- Layout Principal ---
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # --- Área do Gráfico ---
+        # Esquerda: Área do Gráfico
         self.left_frame = ttk.Frame(self.main_frame)
         self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # --- Controles ---
+        # Direita: Painel de Controle
         self.right_frame = ttk.Frame(self.main_frame, width=280)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.Y, expand=False, padx=5, pady=5)
         
@@ -41,7 +46,7 @@ class PointCloudViewer:
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-        # Conecta o evento de CLIQUE do mouse
+        # Evento de clique para deletar pontos
         self.cid = self.fig.canvas.mpl_connect('button_press_event', self.on_click_delete)
         
         toolbar_frame = ttk.Frame(self.left_frame)
@@ -50,152 +55,251 @@ class PointCloudViewer:
         self.toolbar.update()
 
     def _setup_controls(self):
-        # Seleção de Arquivo
-        ttk.Label(self.right_frame, text="Selecione o Modelo:").pack(fill=tk.X, pady=(10,0))
-        self.side_combo = ttk.Combobox(self.right_frame, state="readonly")
-        self.side_combo.pack(fill=tk.X, pady=(0,10))
-        self.side_combo.bind("<<ComboboxSelected>>", self.on_side_selected)
+        # 1. Seleção de Arquivo
+        ttk.Label(self.right_frame, text="Arquivo / Amostra:").pack(fill=tk.X, pady=(10,0))
+        self.file_combo = ttk.Combobox(self.right_frame, state="readonly")
+        self.file_combo.pack(fill=tk.X, pady=(0,10))
+        self.file_combo.bind("<<ComboboxSelected>>", self.on_file_selected)
         
-        # Instruções
-        inst_frame = ttk.LabelFrame(self.right_frame, text="Como Usar")
+        # 2. Lista de Passos (Steps)
+        # Equivalente ao Listbox do script antigo s2_Outline_gui.py
+        ttk.Label(self.right_frame, text="Passos (Steps):").pack(fill=tk.X, pady=(5,0))
+        self.step_listbox = tk.Listbox(self.right_frame, height=15)
+        self.step_listbox.pack(fill=tk.BOTH, pady=(0, 10), expand=False)
+        self.step_listbox.bind("<<ListboxSelect>>", self.on_step_selected)
+
+        # 3. Instruções e Info
+        inst_frame = ttk.LabelFrame(self.right_frame, text="Instruções")
         inst_frame.pack(fill=tk.X, pady=5)
-        lbl = ttk.Label(inst_frame, text="1. Botão ESQUERDO: Deleta ponto\n2. Botão DIREITO: Restaura último\n(Use o Zoom da barra se precisar)", wraplength=250)
+        lbl = ttk.Label(inst_frame, text="1. Selecione um Passo na lista.\n2. Clique no ponto p/ deletar.", wraplength=250)
         lbl.pack(padx=5, pady=5)
 
-        # Botões de Ação
-        self.btn_recalc = ttk.Button(self.right_frame, text="Recalcular Curva", command=self.recalculate_fit)
-        self.btn_recalc.pack(fill=tk.X, pady=(20, 5))
-        
+        # Botões
         self.btn_save = ttk.Button(self.right_frame, text="Salvar Alterações", command=self.save_changes)
-        self.btn_save.pack(fill=tk.X, pady=5)
+        self.btn_save.pack(fill=tk.X, pady=10)
         
-        # Info
-        self.info_lbl = ttk.Label(self.right_frame, text="Pontos: -\nGrau: -", wraplength=200)
-        self.info_lbl.pack(fill=tk.X, pady=20)
+        self.info_lbl = ttk.Label(self.right_frame, text="Info: -")
+        self.info_lbl.pack(fill=tk.X, pady=10)
 
     def load_files(self):
+        """Carrega todos os JSONs e identifica se são Steps ou Flat."""
         files = glob.glob(os.path.join(self.input_dir, "*.json"))
-        self.data_by_side = {}
+        self.data_store = {}
+        
         if not files:
-            messagebox.showinfo("Aviso", "Nenhum arquivo JSON encontrado.")
+            messagebox.showinfo("Aviso", "Nenhum arquivo JSON encontrado na pasta de saída.")
             return
 
         for fpath in files:
             try:
                 with open(fpath, 'r') as f:
                     data = json.load(f)
-                    key = data.get('side', os.path.basename(fpath))
-                    # Guarda backup dos pontos originais para reset se precisar
-                    data['_original_points'] = data.get('points', [])
-                    self.data_by_side[key] = {'data': data, 'path': fpath}
-            except Exception: continue
+                
+                fname = os.path.basename(fpath)
+                
+                # Detecção do Tipo de Arquivo
+                if 'steps' in data and isinstance(data['steps'], list):
+                    ftype = 'steps' # Arquivo gerado pelo StepSegmenter
+                elif 'points' in data and isinstance(data['points'], list):
+                    ftype = 'flat'  # Arquivo gerado pelo SurfacePipeline (SideX.json)
+                else:
+                    ftype = 'model' # Arquivo de Subtração (sem pontos)
+                
+                self.data_store[fname] = {
+                    'data': data,
+                    'type': ftype,
+                    'path': fpath
+                }
+            except Exception as e:
+                print(f"Erro ao carregar {fpath}: {e}")
         
-        self.side_combo['values'] = list(self.data_by_side.keys())
-        if self.side_combo['values']:
-            self.side_combo.current(0)
-            self.on_side_selected(None)
+        # Atualiza a Combobox
+        sorted_files = sorted(self.data_store.keys())
+        self.file_combo['values'] = sorted_files
+        
+        # Tenta selecionar o primeiro arquivo "Steps" automaticamente
+        steps_files = [f for f in sorted_files if self.data_store[f]['type'] == 'steps']
+        if steps_files:
+            self.file_combo.set(steps_files[0])
+            self.on_file_selected(None)
+        elif sorted_files:
+            self.file_combo.current(0)
+            self.on_file_selected(None)
 
-    def on_side_selected(self, event):
-        self.current_side = self.side_combo.get()
-        self.modified = False
+    def on_file_selected(self, event):
+        self.current_file = self.file_combo.get()
+        if not self.current_file: return
+        
+        info = self.data_store[self.current_file]
+        data = info['data']
+        ftype = info['type']
+        
+        # Limpa e popula a Listbox de Passos
+        self.step_listbox.delete(0, tk.END)
+        
+        if ftype == 'steps':
+            steps = data.get('steps', [])
+            for i, s in enumerate(steps):
+                cnt = s.get('point_count', len(s.get('points', [])))
+                self.step_listbox.insert(tk.END, f"Passo {i+1} ({cnt} pts)")
+            
+            # Seleciona automaticamente o primeiro passo para visualização
+            if steps:
+                self.step_listbox.selection_set(0)
+                self.on_step_selected(None)
+            else:
+                self.current_step_idx = None
+                self.update_plot()
+                
+        elif ftype == 'flat':
+            # Trata como um único "passo" gigante
+            cnt = len(data.get('points', []))
+            self.step_listbox.insert(tk.END, f"Todos os Pontos ({cnt} pts)")
+            self.step_listbox.selection_set(0)
+            self.on_step_selected(None)
+            
+        else:
+            self.step_listbox.insert(tk.END, "(Apenas Modelo/Coeficientes)")
+            self.current_step_idx = None
+            self.update_plot()
+
+    def on_step_selected(self, event):
+        sel = self.step_listbox.curselection()
+        if not sel: return
+        self.current_step_idx = sel[0]
         self.update_plot()
 
-    def on_click_delete(self, event):
-        """Detecta clique e remove o ponto mais próximo."""
-        # Ignora se estiver usando ferramentas de zoom/pan da toolbar
-        if self.toolbar.mode != "" or event.inaxes != self.ax: return
-        if not self.current_side: return
+    def get_current_points(self):
+        """Retorna array numpy dos pontos do passo atual."""
+        if not self.current_file or self.current_step_idx is None:
+            return None
+            
+        info = self.data_store[self.current_file]
+        data = info['data']
+        ftype = info['type']
         
-        data_wrapper = self.data_by_side[self.current_side]['data']
-        points = np.array(data_wrapper['points'])
-        if len(points) == 0: return
+        if ftype == 'steps':
+            steps = data.get('steps', [])
+            if self.current_step_idx < len(steps):
+                pts = steps[self.current_step_idx].get('points', [])
+                return np.array(pts)
+        elif ftype == 'flat':
+            pts = data.get('points', [])
+            return np.array(pts)
+            
+        return None
 
-        # Coordenadas do clique (Y, Z)
+    def update_current_points(self, new_points):
+        """Salva as alterações de pontos na estrutura de dados em memória."""
+        if not self.current_file or self.current_step_idx is None: return
+        
+        info = self.data_store[self.current_file]
+        data = info['data']
+        ftype = info['type']
+        
+        pts_list = new_points.tolist()
+        
+        if ftype == 'steps':
+            data['steps'][self.current_step_idx]['points'] = pts_list
+            data['steps'][self.current_step_idx]['point_count'] = len(pts_list)
+            
+            # Atualiza texto na listbox para refletir a nova contagem
+            self.step_listbox.delete(self.current_step_idx)
+            self.step_listbox.insert(self.current_step_idx, f"Passo {self.current_step_idx+1} ({len(pts_list)} pts)")
+            self.step_listbox.selection_set(self.current_step_idx)
+            
+        elif ftype == 'flat':
+            data['points'] = pts_list
+            self.step_listbox.delete(0)
+            self.step_listbox.insert(0, f"Todos os Pontos ({len(pts_list)} pts)")
+            self.step_listbox.selection_set(0)
+
+    def update_plot(self):
+        self.ax.clear()
+        self.ax.grid(True, linestyle='--', alpha=0.6)
+        self.ax.set_xlabel('Y (mm)')
+        self.ax.set_ylabel('Z (mm)')
+        
+        if not self.current_file:
+            self.canvas.draw()
+            return
+            
+        info = self.data_store[self.current_file]
+        
+        # 1. Plotar Pontos (se existirem no passo atual)
+        pts = self.get_current_points()
+        has_points = False
+        
+        if pts is not None and pts.size > 0:
+            if pts.shape[1] >= 3:
+                # Plot Y (col 1) vs Z (col 2)
+                self.ax.scatter(pts[:, 1], pts[:, 2], s=20, c='blue', alpha=0.7, label='Pontos', picker=5)
+                has_points = True
+                
+                # Ajuste automático de limites com margem
+                ymin, ymax = pts[:, 1].min(), pts[:, 1].max()
+                zmin, zmax = pts[:, 2].min(), pts[:, 2].max()
+                ymarg, zmarg = (ymax-ymin)*0.1, (zmax-zmin)*0.1
+                if ymarg==0: ymarg=1
+                if zmarg==0: zmarg=0.1
+                self.ax.set_xlim(ymin-ymarg, ymax+ymarg)
+                self.ax.set_ylim(zmin-zmarg, zmax+zmarg)
+        
+        # 2. Plotar Modelo Global (se houver coeficientes)
+        data = info['data']
+        if 'coeffs' in data:
+            try:
+                xlims = self.ax.get_xlim()
+                y_line = np.linspace(xlims[0], xlims[1], 100)
+                x_mid = 0 if pts is None else np.mean(pts[:, 0])
+                x_line = np.full_like(y_line, x_mid)
+                
+                z_line = Fitter.eval_2d_poly(x_line, y_line, data)
+                self.ax.plot(y_line, z_line, 'r-', lw=2, label='Fit Global')
+                has_points = True
+            except: pass
+
+        if has_points:
+            self.ax.legend()
+        
+        self.ax.set_title(f"{self.current_file}")
+        self.canvas.draw()
+        
+        # Atualiza Label de Info
+        txt = f"Tipo: {info['type']}"
+        if pts is not None: txt += f" | Pts no Passo: {len(pts)}"
+        self.info_lbl.config(text=txt)
+
+    def on_click_delete(self, event):
+        """Remove o ponto mais próximo do clique (apenas no passo atual)."""
+        if self.toolbar.mode != "" or event.inaxes != self.ax: return
+        
+        pts = self.get_current_points()
+        if pts is None or len(pts) == 0: return
+        
         click_y, click_z = event.xdata, event.ydata
         
-        # Calcula distâncias (apenas no plano YZ visualizado)
-        # points[:, 1] é Y, points[:, 2] é Z
-        dist = np.sqrt((points[:, 1] - click_y)**2 + (points[:, 2] - click_z)**2)
-        
-        # Encontra o índice do ponto mais próximo
+        # Distância Euclidiana 2D (YZ)
+        dist = np.sqrt((pts[:, 1] - click_y)**2 + (pts[:, 2] - click_z)**2)
         idx_min = np.argmin(dist)
         min_dist = dist[idx_min]
         
-        # Limite de tolerância para deletar (ajuste se necessário)
-        TOLERANCE = 1.0 # mm
-        
-        if min_dist < TOLERANCE:
-            # Remove o ponto
-            print(f"Deletando ponto índice {idx_min} (dist={min_dist:.2f})")
-            new_points = np.delete(points, idx_min, axis=0)
-            data_wrapper['points'] = new_points.tolist()
+        # Tolerância de 1.0 mm para clicar
+        if min_dist < 1.0:
+            new_pts = np.delete(pts, idx_min, axis=0)
+            self.update_current_points(new_pts)
             self.modified = True
-            
-            # Atualiza apenas o gráfico (não recalcula a curva ainda para ser rápido)
-            self.update_plot(recalc=False)
-
-    def recalculate_fit(self):
-        """Recalcula o polinômio com os pontos atuais."""
-        if not self.current_side: return
-        data = self.data_by_side[self.current_side]['data']
-        pts = np.array(data['points'])
-        degree = data.get('degree', 2)
-        
-        try:
-            # Chama o Fitter estático para recalcular coeficientes
-            # Nota: O Fitter espera X, Y, Z.
-            new_model = Fitter.fit_2d_poly(pts[:, 0], pts[:, 1], pts[:, 2], degree)
-            
-            # Atualiza os coeficientes no objeto de dados
-            data['coeffs'] = new_model['coeffs']
-            data['r_squared'] = new_model['r_squared']
-            
-            messagebox.showinfo("Sucesso", f"Curva recalculada!\nR²: {new_model['r_squared']:.4f}")
-            self.update_plot(recalc=True)
-            self.modified = True
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao ajustar: {e}")
+            self.update_plot()
+            print(f"Ponto deletado. Restam {len(new_pts)}.")
 
     def save_changes(self):
-        if not self.current_side: return
-        wrapper = self.data_by_side[self.current_side]
-        path = wrapper['path']
+        if not self.current_file: return
+        info = self.data_store[self.current_file]
         
         try:
-            with open(path, 'w') as f:
-                json.dump(wrapper['data'], f, indent=2) # Removemos o cls NumpyEncoder para simplificar, certifique-se que points é lista
-            messagebox.showinfo("Salvo", f"Arquivo atualizado:\n{os.path.basename(path)}")
+            with open(info['path'], 'w') as f:
+                json.dump(info['data'], f, indent=2)
+            messagebox.showinfo("Salvo", f"Arquivo salvo com sucesso:\n{self.current_file}")
             self.modified = False
         except Exception as e:
-            messagebox.showerror("Erro ao Salvar", str(e))
-
-    def update_plot(self, recalc=True):
-        if not self.current_side: return
-        data = self.data_by_side[self.current_side]['data']
-        
-        self.ax.clear()
-        self.ax.grid(True, linestyle='--', alpha=0.6)
-        
-        # 1. Plot Pontos
-        pts = np.array(data['points'])
-        if len(pts) > 0:
-            self.ax.scatter(pts[:, 1], pts[:, 2], s=15, c='blue', alpha=0.6, label='Pontos', picker=True)
-        
-        # 2. Plot Curva (Se coeficientes existirem)
-        if 'coeffs' in data and len(pts) > 0:
-            y_min, y_max = pts[:, 1].min(), pts[:, 1].max()
-            x_mid = np.mean(pts[:, 0]) # Usa o X médio para o corte 2D
-            
-            y_line = np.linspace(y_min, y_max, 100)
-            x_line = np.full_like(y_line, x_mid)
-            
-            try:
-                z_line = Fitter.eval_2d_poly(x_line, y_line, data)
-                self.ax.plot(y_line, z_line, 'r-', linewidth=2, label='Fit Atual')
-            except: pass
-
-        self.ax.set_title(f"{self.current_side} (Pontos: {len(pts)})")
-        self.ax.set_xlabel('Y (mm)')
-        self.ax.set_ylabel('Z (mm)')
-        self.ax.legend()
-        self.canvas.draw()
+            messagebox.showerror("Erro", str(e))
