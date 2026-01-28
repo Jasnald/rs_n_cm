@@ -19,16 +19,13 @@ class Fitter:
         Returns:
             dict: Model dictionary with type, degree, coefficients, and normalization info.
         """
-        x_mean, x_std = np.mean(x), np.std(x)
-        if x_std == 0:
-            x_std = 1.0  # Prevent division by zero if x is constant
-        x_norm = (x - x_mean) / x_std
-        coeffs = np.polyfit(x_norm, z, degree)
+
+        coeffs = np.polyfit(x, z, degree)
         return {
             "type": "poly_1d",
             "degree": degree,
             "coeffs": coeffs.tolist(),
-            "norm": {"mean": float(x_mean), "std": float(x_std)}
+            "norm": {"mean": float(np.mean(x)), "std": float(np.std(x))}
         }
 
     @staticmethod
@@ -43,10 +40,9 @@ class Fitter:
         Returns:
             float: Evaluated polynomial value at x.
         """
-        norm = model["norm"]
         coeffs = model["coeffs"]
-        x_norm = (x - norm["mean"]) / norm["std"]
-        return np.polyval(coeffs, x_norm)
+        # np.polyval espera a mesma ordem do polyfit (Decrescente)
+        return np.polyval(coeffs, x)
 
     @staticmethod
     def fit_2d_poly(x: np.ndarray, y: np.ndarray, z: np.ndarray, degree: int) -> dict:

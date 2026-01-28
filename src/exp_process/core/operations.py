@@ -20,26 +20,42 @@ class ModelOps:
         """
         deg_h = model_high['degree']
         deg_l = model_low['degree']
-
-        if deg_l > deg_h:
-            raise ValueError("First model must have degree >= second model.")
-
+        
         coeffs_h = np.array(model_high['coeffs'])
         coeffs_l = np.array(model_low['coeffs'])
-
-        len_h = len(coeffs_h)
-        len_l = len(coeffs_l)
-
-        coeffs_l_padded = np.zeros(len_h)  # Pad lower model to match length
-
-        coeffs_l_padded[-1] = coeffs_l[-1]  # Always copy constant term
-
-        terms_count = 2 * deg_l
-        if terms_count > 0:
-            coeffs_l_padded[0:terms_count] = coeffs_l[0:terms_count]  # Copy matching terms
-
-        diff_coeffs = coeffs_h - coeffs_l_padded
-
+        
+        # --- LÓGICA NOVA PARA 1D (Exp2) ---
+        if model_high.get('type') == 'poly_1d':
+            # Em 1D (numpy), a ordem é [x^N, x^N-1, ..., x^0]
+            # Precisamos alinhar pelo final (x^0).
+            # Ex: High(Len 6) - Low(Len 2). Low deve ser [0,0,0,0, b1, b0]
+            
+            diff_len = len(coeffs_h) - len(coeffs_l)
+            if diff_len < 0:
+                raise ValueError("Modelo High deve ter grau maior ou igual ao Low")
+                
+            # Preenche com zeros à ESQUERDA
+            coeffs_l_padded = np.pad(coeffs_l, (diff_len, 0), 'constant')
+            
+            diff_coeffs = coeffs_h - coeffs_l_padded
+            
+        # --- LÓGICA ANTIGA PARA 2D (Exp1) ---
+        else:
+            # Estrutura Customizada: [x, y, x^2..., Bias]
+            # O bias é o último. O resto cresce do índice 0.
+            len_h = len(coeffs_h)
+            coeffs_l_padded = np.zeros(len_h)
+            
+            # Copia Bias (último)
+            coeffs_l_padded[-1] = coeffs_l[-1]
+            
+            # Copia termos crescentes
+            terms_count = 2 * deg_l
+            if terms_count > 0:
+                coeffs_l_padded[0:terms_count] = coeffs_l[0:terms_count]
+                
+            diff_coeffs = coeffs_h - coeffs_l_padded
+        
         return {
             "type": model_high['type'],
             "degree": deg_h,
