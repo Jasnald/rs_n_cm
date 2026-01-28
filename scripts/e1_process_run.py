@@ -112,6 +112,7 @@ def step3_fitting_and_flattening(sides_list):
     print(f"\n=== ETAPA 3: AJUSTE E APLANAMENTO ({HIGH_DEGREE} - {LOW_DEGREE}) ===")
     transformer = DataTransformer(DATA_FIX_RULES)
 
+
     for side in sides_list:
         step_file = os.path.join(SURFACE_DIR, f"{side}_Steps.json")
         if not os.path.exists(step_file): continue
@@ -143,7 +144,7 @@ def step3_fitting_and_flattening(sides_list):
         # Isso cria uma superfície sem a inclinação da peça
         model_flat = ModelOps.subtract_coeffs(model_high, model_low)
         
-        # Adiciona metadados e salva
+
         model_flat['side'] = side
         model_flat['points'] = points_np.tolist()
         model_flat['note'] = f"Subtraction: Degree {HIGH_DEGREE} - Degree {LOW_DEGREE}"
@@ -154,24 +155,27 @@ def step3_fitting_and_flattening(sides_list):
         print(f"   Salvo modelo aplanado para {side}")
 
 def step4_comparison():
-    print("\n=== ETAPA 4: SUBTRAÇÃO ENTRE LADOS (Side1 - Side2) ===")
+    print("\n=== ETAPA 4: MÉDIA ENTRE LADOS (Side1 e Side2) ===") # Ajustei o texto
     
     file1 = os.path.join(SURFACE_DIR, "Side1.json")
     file2 = os.path.join(SURFACE_DIR, "Side2.json")
     
     if os.path.exists(file1) and os.path.exists(file2):
-        print(">> Calculando Side1 - Side2 (usando modelos aplanados)...")
+        print(">> Calculando Média (Average) entre Side1 e Side2...")
         
         m1 = IO.load_json(file1)
         m2 = IO.load_json(file2)
         
-        # Agora subtrai Side1 de Side2 (ambos já são Grau 4 aplanados)
-        diff_model = ModelOps.subtract_coeffs(m1, m2)
-        diff_model['side'] = "Subtraction_S1_S2"
+        # CORREÇÃO: Usar average_models em vez de subtract_coeffs
+        # Note que average_models espera uma LISTA de modelos
+        avg_model = ModelOps.average_models([m1, m2]) 
         
-        save_path = os.path.join(SURFACE_DIR, "Subtraction_Side1_Side2.json")
-        IO.save_json(diff_model, save_path)
-        print(">> Subtração salva com sucesso.")
+        avg_model['side'] = "Average_S1_S2" # Ajustei o nome para refletir a operação
+        
+        # Ajustar o nome do ficheiro de saída também
+        save_path = os.path.join(SURFACE_DIR, "Average_Side1_Side2.json")
+        IO.save_json(avg_model, save_path)
+        print(">> Média salva com sucesso.")
     else:
         print(">> Arquivos Side1/Side2 não encontrados.")
 
