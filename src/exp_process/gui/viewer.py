@@ -10,25 +10,22 @@ class PointCloudViewer:
         self.root.geometry("1200x800")
         
         self.input_dir = input_dir
-        # Estrutura de armazenamento: { filename: { 'data': json_dict, 'type': 'steps'|'flat'|'model', 'path': str } }
         self.data_store = {} 
         self.current_file = None
-        self.current_step_idx = None # Índice do passo selecionado (ou None para Flat)
+        self.current_step_idx = None
         self.modified = False
         
         self._setup_ui()
         self.load_files()
         
     def _setup_ui(self):
-        # --- Layout Principal ---
+
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Esquerda: Área do Gráfico
+
         self.left_frame = ttk.Frame(self.main_frame)
         self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Direita: Painel de Controle
+
         self.right_frame = ttk.Frame(self.main_frame, width=280)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.Y, expand=False, padx=5, pady=5)
         
@@ -45,8 +42,7 @@ class PointCloudViewer:
         self.canvas = FigureCanvasTkAgg(self.fig, self.left_frame)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
-        # Evento de clique para deletar pontos
+
         self.cid = self.fig.canvas.mpl_connect('button_press_event', self.on_click_delete)
         
         toolbar_frame = ttk.Frame(self.left_frame)
@@ -55,26 +51,22 @@ class PointCloudViewer:
         self.toolbar.update()
 
     def _setup_controls(self):
-        # 1. Seleção de Arquivo
+
         ttk.Label(self.right_frame, text="Arquivo / Amostra:").pack(fill=tk.X, pady=(10,0))
         self.file_combo = ttk.Combobox(self.right_frame, state="readonly")
         self.file_combo.pack(fill=tk.X, pady=(0,10))
         self.file_combo.bind("<<ComboboxSelected>>", self.on_file_selected)
         
-        # 2. Lista de Passos (Steps)
-        # Equivalente ao Listbox do script antigo s2_Outline_gui.py
         ttk.Label(self.right_frame, text="Passos (Steps):").pack(fill=tk.X, pady=(5,0))
         self.step_listbox = tk.Listbox(self.right_frame, height=15)
         self.step_listbox.pack(fill=tk.BOTH, pady=(0, 10), expand=False)
         self.step_listbox.bind("<<ListboxSelect>>", self.on_step_selected)
 
-        # 3. Instruções e Info
         inst_frame = ttk.LabelFrame(self.right_frame, text="Instruções")
         inst_frame.pack(fill=tk.X, pady=5)
         lbl = ttk.Label(inst_frame, text="1. Selecione um Passo na lista.\n2. Clique no ponto p/ deletar.", wraplength=250)
         lbl.pack(padx=5, pady=5)
 
-        # Botões
         self.btn_save = ttk.Button(self.right_frame, text="Salvar Alterações", command=self.save_changes)
         self.btn_save.pack(fill=tk.X, pady=10)
         
@@ -82,7 +74,7 @@ class PointCloudViewer:
         self.info_lbl.pack(fill=tk.X, pady=10)
 
     def load_files(self):
-        """Carrega todos os JSONs e identifica se são Steps ou Flat."""
+
         files = glob.glob(os.path.join(self.input_dir, "*.json"))
         self.data_store = {}
         
@@ -96,14 +88,13 @@ class PointCloudViewer:
                     data = json.load(f)
                 
                 fname = os.path.basename(fpath)
-                
-                # Detecção do Tipo de Arquivo
+
                 if 'steps' in data and isinstance(data['steps'], list):
-                    ftype = 'steps' # Arquivo gerado pelo StepSegmenter
+                    ftype = 'steps'
                 elif 'points' in data and isinstance(data['points'], list):
-                    ftype = 'flat'  # Arquivo gerado pelo SurfacePipeline (SideX.json)
+                    ftype = 'flat'  
                 else:
-                    ftype = 'model' # Arquivo de Subtração (sem pontos)
+                    ftype = 'model'
                 
                 self.data_store[fname] = {
                     'data': data,
@@ -112,12 +103,10 @@ class PointCloudViewer:
                 }
             except Exception as e:
                 print(f"Erro ao carregar {fpath}: {e}")
-        
-        # Atualiza a Combobox
+
         sorted_files = sorted(self.data_store.keys())
         self.file_combo['values'] = sorted_files
-        
-        # Tenta selecionar o primeiro arquivo "Steps" automaticamente
+
         steps_files = [f for f in sorted_files if self.data_store[f]['type'] == 'steps']
         if steps_files:
             self.file_combo.set(steps_files[0])
@@ -133,8 +122,7 @@ class PointCloudViewer:
         info = self.data_store[self.current_file]
         data = info['data']
         ftype = info['type']
-        
-        # Limpa e popula a Listbox de Passos
+
         self.step_listbox.delete(0, tk.END)
         
         if ftype == 'steps':
@@ -142,8 +130,7 @@ class PointCloudViewer:
             for i, s in enumerate(steps):
                 cnt = s.get('point_count', len(s.get('points', [])))
                 self.step_listbox.insert(tk.END, f"Passo {i+1} ({cnt} pts)")
-            
-            # Seleciona automaticamente o primeiro passo para visualização
+
             if steps:
                 self.step_listbox.selection_set(0)
                 self.on_step_selected(None)
@@ -152,7 +139,7 @@ class PointCloudViewer:
                 self.update_plot()
                 
         elif ftype == 'flat':
-            # Trata como um único "passo" gigante
+
             cnt = len(data.get('points', []))
             self.step_listbox.insert(tk.END, f"Todos os Pontos ({cnt} pts)")
             self.step_listbox.selection_set(0)
@@ -170,7 +157,7 @@ class PointCloudViewer:
         self.update_plot()
 
     def get_current_points(self):
-        """Retorna array numpy dos pontos do passo atual."""
+
         if not self.current_file or self.current_step_idx is None:
             return None
             
@@ -190,7 +177,7 @@ class PointCloudViewer:
         return None
 
     def update_current_points(self, new_points):
-        """Salva as alterações de pontos na estrutura de dados em memória."""
+
         if not self.current_file or self.current_step_idx is None: return
         
         info = self.data_store[self.current_file]
@@ -226,13 +213,12 @@ class PointCloudViewer:
             
         info = self.data_store[self.current_file]
         
-        # 1. Plotar Pontos (se existirem no passo atual)
         pts = self.get_current_points()
         has_points = False
         
         if pts is not None and pts.size > 0:
             if pts.shape[1] >= 3:
-                # Plot Y (col 1) vs Z (col 2)
+
                 self.ax.scatter(pts[:, 1], pts[:, 2], s=20, c='blue', alpha=0.7, label='Pontos', picker=5)
                 has_points = True
                 
@@ -244,8 +230,7 @@ class PointCloudViewer:
                 if zmarg==0: zmarg=0.1
                 self.ax.set_xlim(ymin-ymarg, ymax+ymarg)
                 self.ax.set_ylim(zmin-zmarg, zmax+zmarg)
-        
-        # 2. Plotar Modelo Global (se houver coeficientes)
+
         data = info['data']
         if 'coeffs' in data:
             try:
@@ -265,13 +250,12 @@ class PointCloudViewer:
         self.ax.set_title(f"{self.current_file}")
         self.canvas.draw()
         
-        # Atualiza Label de Info
         txt = f"Tipo: {info['type']}"
         if pts is not None: txt += f" | Pts no Passo: {len(pts)}"
         self.info_lbl.config(text=txt)
 
     def on_click_delete(self, event):
-        """Remove o ponto mais próximo do clique (apenas no passo atual)."""
+
         if self.toolbar.mode != "" or event.inaxes != self.ax: return
         
         pts = self.get_current_points()
@@ -279,12 +263,10 @@ class PointCloudViewer:
         
         click_y, click_z = event.xdata, event.ydata
         
-        # Distância Euclidiana 2D (YZ)
         dist = np.sqrt((pts[:, 1] - click_y)**2 + (pts[:, 2] - click_z)**2)
         idx_min = np.argmin(dist)
         min_dist = dist[idx_min]
-        
-        # Tolerância de 1.0 mm para clicar
+
         if min_dist < 1.0:
             new_pts = np.delete(pts, idx_min, axis=0)
             self.update_current_points(new_pts)

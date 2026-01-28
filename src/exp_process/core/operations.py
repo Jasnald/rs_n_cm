@@ -1,66 +1,75 @@
-# Arquivo: src/exp_process/core/operations.py
+
 from ..importations import *
 
 class ModelOps:
+    """
+    Provides static methods for operations on polynomial model dictionaries.
+    """
 
     @staticmethod
     def subtract_coeffs(model_high: dict, model_low: dict) -> dict:
         """
-        Subtrai os coeficientes de dois modelos. 
-        Suporta graus diferentes (ex: Grau 4 - Grau 1) preenchendo com zeros.
+        Subtract the coefficients of two polynomial models, padding as needed.
+
+        Args:
+            model_high (dict): Model with higher or equal degree.
+            model_low (dict): Model with lower or equal degree.
+
+        Returns:
+            dict: Model dictionary with subtracted coefficients.
         """
         deg_h = model_high['degree']
         deg_l = model_low['degree']
-        
-        # Garante que model_high é o de maior grau
+
         if deg_l > deg_h:
-            raise ValueError("O primeiro modelo deve ter grau maior ou igual ao segundo.")
+            raise ValueError("First model must have degree >= second model.")
 
         coeffs_h = np.array(model_high['coeffs'])
         coeffs_l = np.array(model_low['coeffs'])
-        
-        # Estrutura dos coeficientes: [x, y, x^2, y^2, ..., x^n, y^n, Bias]
-        # Tamanho do vetor = 2*grau + 1
-        
+
         len_h = len(coeffs_h)
         len_l = len(coeffs_l)
-        
-        # Cria vetor de zeros do tamanho do maior grau
-        coeffs_l_padded = np.zeros(len_h)
-        
-        # O termo de Bias (constante) é sempre o último
-        coeffs_l_padded[-1] = coeffs_l[-1]
-        
-        # Os termos x^k, y^k ocupam os índices 0 até (2*deg_l)
-        # Ex: Grau 1 (len 3): [x, y, Bias] -> copia [0:2]
+
+        coeffs_l_padded = np.zeros(len_h)  # Pad lower model to match length
+
+        coeffs_l_padded[-1] = coeffs_l[-1]  # Always copy constant term
+
         terms_count = 2 * deg_l
         if terms_count > 0:
-            coeffs_l_padded[0:terms_count] = coeffs_l[0:terms_count]
-            
-        # Agora podemos subtrair diretamente
+            coeffs_l_padded[0:terms_count] = coeffs_l[0:terms_count]  # Copy matching terms
+
         diff_coeffs = coeffs_h - coeffs_l_padded
-        
+
         return {
             "type": model_high['type'],
-            "degree": deg_h, # Mantém o grau maior
+            "degree": deg_h,
             "coeffs": diff_coeffs.tolist(),
             "norm": model_high.get("norm")
         }
 
     @staticmethod
     def average_models(models: list) -> dict:
-        if not models: return {}
+        """
+        Compute the average of multiple polynomial models of the same degree.
+
+        Args:
+            models (list): List of model dictionaries (same degree required).
+
+        Returns:
+            dict: Model dictionary with averaged coefficients, or empty dict if input is empty.
+        """
+        if not models:
+            return {}  # No models to average
         base = models[0]
 
-        # Verifica se todos têm o mesmo grau para média
         base_deg = base['degree']
         for m in models:
             if m['degree'] != base_deg:
-                 raise ValueError("Para média, todos os modelos devem ter o mesmo grau.")
+                raise ValueError("All models must have the same degree for averaging.")
 
         all_coeffs = np.vstack([np.array(m['coeffs']) for m in models])
         avg_coeffs = np.mean(all_coeffs, axis=0)
-        
+
         return {
             "type": base['type'],
             "degree": base['degree'],

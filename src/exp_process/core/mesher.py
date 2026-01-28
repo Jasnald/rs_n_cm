@@ -2,10 +2,23 @@ from ..importations import *
 
 
 class MeshGenerator:
+    """
+    Provides static methods for generating mesh grids for geometric shapes.
+    """
 
     @staticmethod
     def rectangular_grid(width: float, height: float, step: float) -> tuple:
+        """
+        Generate a regular rectangular grid of points.
 
+        Args:
+            width (float): Width of the rectangle.
+            height (float): Height of the rectangle.
+            step (float): Grid spacing.
+
+        Returns:
+            tuple: Arrays of x and y coordinates of grid points.
+        """
         x = np.arange(0, width + step, step)
         y = np.arange(0, height + step, step)
         X, Y = np.meshgrid(x, y)
@@ -13,7 +26,16 @@ class MeshGenerator:
 
     @staticmethod
     def t_shape_grid(dims: dict, step: float) -> tuple:
+        """
+        Generate a grid of points inside a T-shaped polygon.
 
+        Args:
+            dims (dict): Dimensions for T-shape (h_width, h_thickness, v_width, v_height, optional offset_1).
+            step (float): Grid spacing.
+
+        Returns:
+            tuple: Arrays of x and y coordinates of grid points inside the T-shape.
+        """
         h_poly = Polygon([
             (0, 0), (dims['h_width'], 0),
             (dims['h_width'], dims['h_thickness']), (0, dims['h_thickness'])
@@ -27,20 +49,20 @@ class MeshGenerator:
             (v_x_start, dims['h_thickness'] + dims['v_height'])
         ])
 
-        t_shape = h_poly.union(v_poly)
+        t_shape = h_poly.union(v_poly)  # Union to form T-shape
 
         min_x, min_y, max_x, max_y = t_shape.bounds
         x_range = np.arange(min_x, max_x + step, step)
         y_range = np.arange(min_y, max_y + step, step)
-        
+
         valid_points = []
         for x in x_range:
             for y in y_range:
                 if t_shape.contains(Point(x, y)):
-                    valid_points.append((x, y))
-                    
+                    valid_points.append((x, y))  # Only keep points inside T-shape
+
         if not valid_points:
-            return np.array([]), np.array([])
-            
+            return np.array([]), np.array([])  # No valid points found
+
         pts = np.array(valid_points)
         return pts[:, 0], pts[:, 1]

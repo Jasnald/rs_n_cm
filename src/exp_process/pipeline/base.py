@@ -6,6 +6,7 @@ from ..utils.io import save_json
 logger = logging.getLogger(__name__)
 
 class BasePipeline(ABC):
+    
     def __init__(self, input_dir: str, output_dir: str, subfolder: str):
         self.input_dir = input_dir
         self.output_dir = os.path.join(output_dir, subfolder)
@@ -24,22 +25,18 @@ class BasePipeline(ABC):
         for key_id, files in items_map.items():
             logger.info(f"Processando item: {key_id}")
 
-            try:
-                points = self.load_and_process_data(files)
+            points = self.load_and_process_data(files)
 
-                if points is None or len(points) == 0:
-                    logger.warning(f"  Dados vazios para {key_id}. Pulando.")
-                    continue
-
-                for degree in degrees:
-
-                    model = self.fit_model(points, degree)
-                    
-                    self._save_standard_result(key_id, points, model, degree)
-                    
-            except Exception as e:
-                logger.error(f"  Erro crítico em {key_id}: {e}")
+            if points is None or len(points) == 0:
+                logger.warning(f"  Dados vazios para {key_id}. Pulando.")
                 continue
+
+            for degree in degrees:
+
+                model = self.fit_model(points, degree)
+                
+                self._save_standard_result(key_id, points, model, degree)
+
 
     def _save_standard_result(self, key_id, points, model, degree):
 
@@ -56,15 +53,15 @@ class BasePipeline(ABC):
     
     @abstractmethod
     def map_files(self) -> dict:
-        """Deve retornar dict: { 'ID_Unico': ['arq1', 'arq2'] ou {'L':..., 'R':...} }"""
+
         pass
 
     @abstractmethod
     def load_and_process_data(self, files) -> any:
-        """Deve retornar a nuvem de pontos limpa (Numpy array) pronta para o fit."""
+
         pass
 
     @abstractmethod
     def fit_model(self, points, degree) -> dict:
-        """Deve retornar o dicionário do modelo ajustado."""
+
         pass

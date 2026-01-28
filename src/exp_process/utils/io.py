@@ -30,10 +30,6 @@ def load_json(filepath: str) -> dict:
         return json.load(f)
     
 class IOUtils:
-    """
-    Classe utilitária para operações de IO (Input/Output),
-    compatível com os pipelines criados.
-    """
     
     @staticmethod
     def save_json(data: dict, filepath: str, indent: int = 2):

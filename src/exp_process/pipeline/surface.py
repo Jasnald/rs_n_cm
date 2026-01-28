@@ -14,7 +14,7 @@ class SurfacePipeline(BasePipeline):
         self.p_botton, self.p_top, self.p_general = params 
 
     def map_files(self) -> dict:
-        # (Mantenha este método igual ao original, não precisa alterar)
+
         mapped = {}
         pattern = re.compile(r"(Side\d+)_(Measurment\d+)_(bottom|wall)", re.IGNORECASE)
         temp_pairs = {} 
@@ -38,10 +38,9 @@ class SurfacePipeline(BasePipeline):
         return mapped
     
     def process_and_save_steps(self, key_id, points):
-        # 1. Segmentar
+
         steps_list = StepSegmenter.find_steps(points, threshold_percent=0.6)
         
-        # 2. Estruturar para salvar (formato similar ao antigo)
         steps_data = {
             "id": key_id,
             "total_steps": len(steps_list),
@@ -53,11 +52,9 @@ class SurfacePipeline(BasePipeline):
                 "step_number": i + 1,
                 "point_count": len(step_points),
                 "mean_x": float(np.mean(step_points[:, 0])),
-                # Convertendo para lista para serialização JSON
                 "points": step_points.tolist() 
             })
 
-        # 3. Salvar
         filename = f"{key_id}_Steps.json"
         path = os.path.join(self.output_dir, filename)
         save_json(steps_data, path)
@@ -71,24 +68,20 @@ class SurfacePipeline(BasePipeline):
         clean_params_wall = {'z': self.p_top}
 
         for m in measurements_list:
-            # 1. Carrega e LIMPA o Bottom separadamente
+
             raw_b = self.loader.load_surface_data(m['bottom'])['bottom']
             clean_b = OutlierCleaner.filter_iqr(raw_b, clean_params_bottom)
 
-            # 2. Carrega e LIMPA a Wall separadamente
             raw_w = self.loader.load_surface_data(m['wall'])['wall']
             clean_w = OutlierCleaner.filter_iqr(raw_w, clean_params_wall)
 
-            # 3. Só junta depois de limpo
             if len(clean_b) > 0 and len(clean_w) > 0:
                 all_points.append(np.vstack([clean_b, clean_w]))
         
         if not all_points: return None
         
-        # Junta todas as medições (Measurements)
         merged = np.vstack(all_points)
         
-        # (Opcional) Uma limpeza final global leve para remover ruído da junção
         final_clean = OutlierCleaner.filter_iqr(merged, {'z': self.p_general})
         
         return final_clean
