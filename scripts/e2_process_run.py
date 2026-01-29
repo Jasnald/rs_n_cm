@@ -20,6 +20,7 @@ from exp_process.core.operations import ModelOps
 from exp_process.utils.io import IOUtils
 from exp_process.gui.viewer import PointCloudViewer
 from exp_process.core.transformer import DataTransformer
+from processor import ExpProcessor
 
 # Global Configuration
 INPUT_DIR = os.path.join(project_root, "data", "input", "exp2")
@@ -28,13 +29,20 @@ CURVE_DIR = os.path.join(OUTPUT_DIR, "curve_data")
 
 HIGH_DEGREE = 2
 LOW_DEGREE = 1
-NORMALIZE_X = False
-RIDGE_ALPHA = 0.2
+NORMALIZE_X = True
+RIDGE_ALPHA = 1
 IO = IOUtils()
+
+sample_path = os.path.join(INPUT_DIR, "exp1_sample01.py")
+    
+print(f">> Lendo medições de: {os.path.basename(sample_path)}")
+dimensoes_reais = ExpProcessor.process(sample_path)
+largura_base = dimensoes_reais.get('height')
 
 # Transformation Rules (Optional)
 DATA_FIX_RULES = {
-    # "1": { "mirror_x": True } 
+     #"1": { "mirror_x": True },  # Usa o max(x) como referência automática
+     "2": { "mirror_x": True, "mirror_ref": largura_base, "invert_z": False },
 }
 
 def step1_preprocess():
