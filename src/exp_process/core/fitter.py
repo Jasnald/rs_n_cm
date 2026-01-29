@@ -7,25 +7,83 @@ class Fitter:
     """
 
     @staticmethod
-    def fit_1d_poly(x: np.ndarray, z: np.ndarray, degree: int) -> dict:
+    def _compose_linear_substitution(coef_t: np.ndarray, a: float, b: float) -> np.ndarray:
         """
-        Fit a 1D polynomial to normalized x and z data.
+        Recebe coeficientes em t (ordem crescente) e devolve coeficientes em x
+        onde t = a*x + b, ou seja, p(a x + b).
+        """
+        out = np.zeros(1)
+        linear = np.array([b, a])  # (b + a*x) em ordem crescente
+        for c in coef_t[::-1]:  # Horner com ordem crescente
+            out = np.polynomial.polynomial.polymul(out, linear)
+            out[0] += c
+        return out
+
+    @staticmethod
+    def fit_1d_poly(
+        x: np.ndarray,
+        z: np.ndarray,
+        degree: int,
+        normalize_x: bool = False,
+        ridge_alpha: float = 0.0,
+    ) -> dict:
+        """
+        Fit a 1D polynomial to x and z data.
 
         Args:
             x (np.ndarray): Input x values.
             z (np.ndarray): Input z values.
             degree (int): Degree of the polynomial.
+            normalize_x (bool): Normalize x to [-1, 1] before fitting.
+            ridge_alpha (float): Ridge regularization factor (0 for least squares).
 
         Returns:
             dict: Model dictionary with type, degree, coefficients, and normalization info.
         """
 
-        coeffs = np.polyfit(x, z, degree)
+        x = np.asarray(x, dtype=float)
+        z = np.asarray(z, dtype=float)
+
+        if normalize_x:
+            xmin, xmax = float(x.min()), float(x.max())
+            if xmax == xmin:
+                raise ValueError("Todos os x são iguais; não é possível normalizar.")
+            a_lin = 2.0 / (xmax - xmin)
+            b_lin = -(xmax + xmin) / (xmax - xmin)
+            x_fit = a_lin * x + b_lin
+        else:
+            a_lin, b_lin = 1.0, 0.0
+            x_fit = x
+
+        X = np.column_stack([x_fit ** k for k in range(degree + 1)])
+        if ridge_alpha > 0:
+            xtx = X.T @ X
+            xtx += ridge_alpha * np.eye(degree + 1)
+            coeffs_fit = np.linalg.solve(xtx, X.T @ z)
+        else:
+            coeffs_fit, *_ = np.linalg.lstsq(X, z, rcond=None)
+
+        if normalize_x:
+            coeffs_inc = Fitter._compose_linear_substitution(coeffs_fit, a_lin, b_lin)
+        else:
+            coeffs_inc = coeffs_fit
+
+        coeffs = coeffs_inc[::-1]
+
         return {
             "type": "poly_1d",
             "degree": degree,
             "coeffs": coeffs.tolist(),
-            "norm": {"mean": float(np.mean(x)), "std": float(np.std(x))}
+            "norm": {
+                "mean": float(np.mean(x)),
+                "std": float(np.std(x)),
+                "scale": a_lin,
+                "shift": b_lin,
+            },
+            "fit": {
+                "normalize_x": normalize_x,
+                "ridge_alpha": float(ridge_alpha),
+            },
         }
 
     @staticmethod
