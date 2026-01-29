@@ -28,6 +28,8 @@ CURVE_DIR = os.path.join(OUTPUT_DIR, "curve_data")
 
 HIGH_DEGREE = 2
 LOW_DEGREE = 1
+NORMALIZE_X = False
+RIDGE_ALPHA = 0.2
 IO = IOUtils()
 
 # Transformation Rules (Optional)
@@ -39,7 +41,12 @@ def step1_preprocess():
     print("\n=== STEP 1: PRE-PROCESS (Load & Merge L/R) ===")
     
     # Agora usa a classe original, pois ela já sabe ler as pastas
-    pipeline = CurvePipeline(INPUT_DIR, OUTPUT_DIR)
+    pipeline = CurvePipeline(
+        INPUT_DIR,
+        OUTPUT_DIR,
+        normalize_x=NORMALIZE_X,
+        ridge_alpha=RIDGE_ALPHA,
+    )
     
     files_map = pipeline.map_files()
     processed_ids = []
@@ -107,10 +114,22 @@ def step3_fitting_and_flattening(sample_ids):
         X, Z = points_np[:, 0], points_np[:, 1] 
 
         # 1. Fit High Degree (Detail)
-        model_high = Fitter.fit_1d_poly(X, Z, degree=HIGH_DEGREE)
+        model_high = Fitter.fit_1d_poly(
+            X,
+            Z,
+            degree=HIGH_DEGREE,
+            normalize_x=NORMALIZE_X,
+            ridge_alpha=RIDGE_ALPHA,
+        )
         
         # 2. Fit Low Degree (Trend)
-        model_low = Fitter.fit_1d_poly(X, Z, degree=LOW_DEGREE)
+        model_low = Fitter.fit_1d_poly(
+            X,
+            Z,
+            degree=LOW_DEGREE,
+            normalize_x=NORMALIZE_X,
+            ridge_alpha=RIDGE_ALPHA,
+        )
         
         # 3. Flatten
         model_flat = ModelOps.subtract_coeffs(model_high, model_low)

@@ -5,8 +5,21 @@ from ..core.parsers import find_exp2_folders
 
 class CurvePipeline(BasePipeline):
 
-    def __init__(self, input_dir, output_dir):
+    def __init__(
+        self,
+        input_dir,
+        output_dir,
+        *,
+        x_col: int = 0,
+        z_col: int = 1,
+        normalize_x: bool = True,
+        ridge_alpha: float = 1.0,
+    ):
         super().__init__(input_dir, output_dir, subfolder="curve_data")
+        self.x_col = x_col
+        self.z_col = z_col
+        self.normalize_x = normalize_x
+        self.ridge_alpha = ridge_alpha
 
     def map_files(self) -> dict:
         return find_exp2_folders(self.input_dir)
@@ -45,6 +58,12 @@ class CurvePipeline(BasePipeline):
             # return avg_data[:, [0, 2]]
 
     def fit_model(self, points, degree):
-        x = points[:, 0]
-        z = points[:, 1]
-        return Fitter.fit_1d_poly(x, z, degree)
+        x = points[:, self.x_col]
+        z = points[:, self.z_col]
+        return Fitter.fit_1d_poly(
+            x,
+            z,
+            degree,
+            normalize_x=self.normalize_x,
+            ridge_alpha=self.ridge_alpha,
+        )
