@@ -17,16 +17,13 @@ class JSONReader:
     """Lê parâmetros do arquivo .json."""
     @staticmethod
     def read_parameters(json_path: str):
-        try:
-            with open(json_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            # Retorna tupla (array numpy, grau) para compatibilidade
-            params = np.array(data['parameters'])
-            degree = data['degree']
-            return params, degree
-        except Exception as e:
-            print(f"Erro ao ler JSON: {e}")
-            return None, None
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        # Retorna tupla (array numpy, grau) para compatibilidade
+        params = np.array(data['coeffs'])
+        degree = data['degree']
+        return params, degree
+
 
 
 class StressReader:
