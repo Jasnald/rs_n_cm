@@ -31,12 +31,8 @@ develop-eggs/
 .DS_Store
 Thumbs.db
 
-# pastas que não devem ser versionadas
-**/Sample_postprocess/ 
-**/Sample_postprocess
 
-**/Plane_plots/ 
-**/Plane_plots
+
 
 **/data/ 
 **/data
@@ -51,4 +47,6 @@ Thumbs.db
 **/src/simulations/rsa_e
 **/src/simulations/rsa_cut
 **/src/simulations/tests
+
+**/baseados
 
