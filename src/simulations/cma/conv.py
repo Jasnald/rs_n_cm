@@ -24,8 +24,7 @@ _parent_2  = os.path.dirname(_parent_1)
 for p in (_here, _parent_1, _parent_2):
     if p not in sys.path: sys.path.append(p)
 
-from Conversor.Odb_Npz_Parameters import ODB2NPYParameters, OdbBatchConverter
-from Conversor.Odb_Npz_Converter import OdbToNPYConverter
+from conversor.Odb_Npz_Parameters import ODB2NPYParameters, OdbBatchConverter
 
 
 def main():

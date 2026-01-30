@@ -15,6 +15,7 @@ import re
 # Define current directory and module paths
 current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 root_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+project_dir = os.path.abspath(os.path.join(root_dir, os.pardir))
 
 # Adiciona o diretório raiz do projeto para que o Python encontre o Modules_Exp_Data
 if root_dir not in sys.path:
@@ -22,7 +23,6 @@ if root_dir not in sys.path:
 
 # Importa a nova classe de conversão e os parâmetros do Abaqus
 from Odb_Npz_Converter  import OdbToNPYConverter
-from Exp_Data.s1_exp    import *
 from utils              import *
 
 
@@ -56,14 +56,12 @@ class ODB2NPYParameters(object):
         Carrega a configuração a partir de um arquivo JSON e retorna um dicionário.
         """
         if config_path is None:
-            config_path = CONFIG_PATH
-        try:
-            with open(config_path, "r") as f:
-                config = json.load(f)
-            return config
-        except Exception as e:
-            self.logger.error("Erro ao carregar a configuração de '{}': {}".format(config_path, str(e)))
-            return None
+            config_path = os.path.join(project_dir, "data", "config.json")
+
+        with open(config_path, "r") as f:
+            config = json.load(f)
+        return config
+
     
     def run(self):
         """
@@ -80,12 +78,14 @@ class ODB2NPYParameters(object):
                                           else "unknown"))
         self.logger.info(env_message)
     
-        params = AbaqusParameters()
-        params.parameters = self.config if self.config is not None else {}
+        
+        parameters = self.config if self.config is not None else {}
 
         # Acessa diretórios e parâmetros de conversão da configuração
-        self.Simulation_dir = params.parameters["directories"].get(self.method_type_dir, "")
-        conversion_params = params.parameters["conversion_params"].get(self.method_type, {})
+        directories = parameters.get("directories", {})
+        conversion_map = parameters.get("conversion_params", {})
+        self.Simulation_dir = directories.get(self.method_type_dir, "")
+        conversion_params = conversion_map.get(self.method_type, {})
         self.conversion_params.update(conversion_params)
 
         # Define a pasta de saída; neste exemplo, usamos "xdmf_files" para armazenar os arquivos XDMF+HDF5

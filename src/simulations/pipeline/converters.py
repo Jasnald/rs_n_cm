@@ -26,7 +26,7 @@ class ResultConverter:
         print(">>> Etapa 1: Extraindo dados do ODB (Abaqus Python)...")
 
         root_sim    = Path(__file__).parent.parent
-        script_path = root_sim / script_module / "ODB_2_XDMF.py"
+        script_path = root_sim / script_module / "conv.py"
 
         python_cmd = f'"{self.cfg.abaqus_cmd}" python '
 

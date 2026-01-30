@@ -46,7 +46,7 @@ from xml.dom import minidom                               # Para “pretty print
 # -----------------------------------------------------------------------------#
 # Utilitário de log – o mesmo usado nos outros módulos
 # -----------------------------------------------------------------------------#
-from Exp_Data.s1_exp    import CONFIG_PATH
+
 from utils              import *
 
 # -----------------------------------------------------------------------------#
@@ -79,7 +79,8 @@ class NPY2XDMFParameters(object):
             current_dir = os.path.dirname(os.path.abspath(
                 inspect.getfile(inspect.currentframe())))
             root_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
-            config_path = CONFIG_PATH
+            project_dir = os.path.abspath(os.path.join(root_dir, os.pardir))
+            config_path = os.path.join(project_dir, "data", "config.json")
         try:
             with open(config_path, "r") as f:
                 return json.load(f)
