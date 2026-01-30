@@ -1,0 +1,53 @@
+{
+  "analysis": {
+    "comprimento": 1,
+    "mesh_size": 0.1,
+
+    "geometry": {
+      "cord1": 0.08,
+      "cord2": 3.92,
+      "cord3": 3.992
+    }
+  },
+
+  "tables": {
+    "LAND24": [
+      { "d_um": 2,  "sigma_MPa": -95  },
+      { "d_um": 6,  "sigma_MPa": -100 },
+      { "d_um": 12, "sigma_MPa": -245 },
+      { "d_um": 18, "sigma_MPa": -250 },
+      { "d_um": 28, "sigma_MPa": -122 },
+      { "d_um": 43, "sigma_MPa": -95  },
+      { "d_um": 52, "sigma_MPa": -60  },
+      { "d_um": 62, "sigma_MPa": -75  },
+      { "d_um": 76, "sigma_MPa": -100 }
+    ],
+
+    "WIMM20_1": [
+      { "d_um": 0,  "sigma_MPa":  60 },
+      { "d_um": 2,  "sigma_MPa":  45 },
+      { "d_um": 5,  "sigma_MPa":  43 },
+      { "d_um": 6,  "sigma_MPa":  25 },
+      { "d_um": 8,  "sigma_MPa":  22 }
+    ],
+    "WIMM20_2": [
+      { "d_um": 10, "sigma_MPa":   9 },
+      { "d_um": 20, "sigma_MPa": -28 },
+      { "d_um": 40, "sigma_MPa": -20 },
+      { "d_um": 60, "sigma_MPa": -25 },
+      { "d_um": 80, "sigma_MPa":   2 }
+    ],
+    "WIMM20": [
+      { "d_um": 0,  "sigma_MPa":  60 },
+      { "d_um": 2,  "sigma_MPa":  45 },
+      { "d_um": 5,  "sigma_MPa":  43 },
+      { "d_um": 6,  "sigma_MPa":  25 },
+      { "d_um": 8,  "sigma_MPa":  22 },
+      { "d_um": 10, "sigma_MPa":   9 },
+      { "d_um": 20, "sigma_MPa": -28 },
+      { "d_um": 40, "sigma_MPa": -20 },
+      { "d_um": 60, "sigma_MPa": -25 },
+      { "d_um": 80, "sigma_MPa":   2 }
+      ]
+  }
+}

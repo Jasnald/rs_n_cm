@@ -44,5 +44,11 @@ Thumbs.db
 **/Legacy/
 **/Legacy
 
-**/src/simulations/
-**/src/simulations
+**/src/simulations/cma2
+**/src/simulations/cma
+**/src/simulations/rsa
+**/src/simulations/rsa2
+**/src/simulations/rsa_e
+**/src/simulations/rsa_cut
+**/src/simulations/tests
+
