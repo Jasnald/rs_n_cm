@@ -3,12 +3,12 @@
 
 print("Importing package 'sim_two'...")
 
-from ._get_shape2    import ShapeGetterTwo
+from ._get_shape2    import ShapeGetterII
 from ._set_geometry2 import GeometrySetterTwo
 from .model_mixin2   import ModelMixinTwo
 
 __all__ = [
-    "ShapeGetterTwo",
+    "ShapeGetterII",
     "GeometrySetterTwo",
     "ModelMixinTwo",
 ]

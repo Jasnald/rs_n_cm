@@ -3,12 +3,12 @@
 
 from ...utilitary   import *
 from ...imports     import *
-from _get_shape     import ShapeGetter
+from _get_shape     import ShapeGetterI
 
 class GeometrySetter(LoggerMixin):
     def __init__(self):        
         self._draw  = PolygonDrawer()
-        self._shape = ShapeGetter()
+        self._shape = ShapeGetterI()
 
     def _geometry(self, depth=10.0):
         """

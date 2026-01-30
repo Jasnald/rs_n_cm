@@ -4,12 +4,12 @@
 from ...utilitary import*
 from ...imports   import*
 
-from ...geometry.sim_one     import ShapeGetter
+from ...geometry.sim_one     import ShapeGetterI
 from ..base                  import DatumSetter
 
 class PartitionSetter(LoggerMixin):
     def __init__(self):
-        self._shape = ShapeGetter()
+        self._shape = ShapeGetterI()
         self._datum = DatumSetter()
 
     def partition(self):

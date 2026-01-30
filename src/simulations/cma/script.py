@@ -9,9 +9,12 @@ current_dir = os.path.dirname(
             inspect.currentframe())))
 dir_1 = os.path.dirname(current_dir)
 dir_2 = os.path.dirname(dir_1)
+dir_3 = os.path.dirname(dir_2)
+
 sys.path.append(current_dir)
 sys.path.append(dir_1)
 sys.path.append(dir_2)
+sys.path.append(dir_3)
 
 from utils import *
 from _modules import *
@@ -70,7 +73,7 @@ class ContourAnalysis(object):
         self._job         = JobSetter()
         self._partitioner = PartitionSetter()
         self._datum       = DatumSetter()
-        self._shape       = ShapeGetter()
+        self._shape       = ShapeGetterI()
         self._nodes       = NodeSetCreator()
         self._bcset       = BCSet()
 
@@ -210,27 +213,24 @@ if __name__ == "__main__":
                 os.path.abspath(
                 inspect.getfile(
                 inspect.currentframe())))
-    # dir_1 = os.path.dirname(current_dir)
-    # dir_2 = os.path.dirname(dir_1)
-    # sys.path.append(current_dir)
-    # sys.path.append(dir_1)
-    # sys.path.append(dir_2)
+
+    dir_1 = os.path.dirname(current_dir)
+    dir_2 = os.path.dirname(dir_1)
+    dir_3 = os.path.dirname(dir_2)
+    CONFIG_PATH = os.path.join(dir_3, "data", "config.json")
+    
     from _modules import *  
-    from Exp_Data.s1_exp import *
+    
 
     parameters = ParametersGetter()
 
-    config_dir = CONFIG_PATH
 
-    with open(config_dir, "r") as f: config_data = json.load(f)
+    with open(CONFIG_PATH, "r") as f: config_data = json.load(f)
 
-    params = AbaqusParameters()
-    params.parameters = config_data
+    work_dir = config_data.get("directories", {}).get("work_directory", "C:/Simulation4")
+    output_dir = os.path.join(work_dir, "Contour_Method")
 
-    Simulation_wd = params.get_work_directory()
-    Simulation_dir = os.path.join(Simulation_wd, "Contour_Method")
 
-    output_dir = Simulation_dir
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 

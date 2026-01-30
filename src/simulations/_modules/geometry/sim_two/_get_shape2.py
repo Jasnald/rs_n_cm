@@ -1,17 +1,25 @@
 # -*- coding: utf-8 -*-
 # _get_shape2.py
 
-from ...utilitary import *
-from Exp_Data.s2_exp.mean_dim_2 import DimTwo
+from ...imports   import *
+from ...utilitary import*
+import processor
 
-class ShapeGetterTwo(LoggerMixin):
+class ShapeGetterII(LoggerMixin):
+    def t_shape(self):
+        """
+        Retrieves mean dimensions from experimental data file.
+        Target: data/input/exp2/exp2_sample.py
+        """
+        # Localiza a raiz do projeto a partir do arquivo processor
+        src_path = os.path.dirname(os.path.abspath(processor.__file__))
+        root_path = os.path.dirname(src_path)
+        
+        data_path = os.path.join(root_path, "data", "input", "exp2", "exp2_sample.py")
+        
+        print(" [ShapeGetter] Loading geometry from: {}".format(data_path))
 
-    def shape(self):
-        """
-        get_t_shape / (method)
-        What it does:
-        Retrieves the mean dimensions for the T-shaped workpiece from the Mean_dim_workpiece utility.
-        """
-        dimensions = DimTwo()
-        # print("Dimensões obtidas:", dimensions)
-        return dimensions
+        dims = processor.ExpProcessor.process(data_path)
+
+            
+        return dims
