@@ -2,8 +2,8 @@
 
 from .imports import *
 from .config import SimulationConfig
-from Simulations._inp_modules import *
-from Conversor.Npy_2_Xdmf import NPY2XDMFParameters, NpyBatchToXdmfConverter
+from simulations._inp_modules import *
+from conversor.Npy_2_Xdmf import NPY2XDMFParameters, NpyBatchToXdmfConverter
 
 
 class ResultConverter:

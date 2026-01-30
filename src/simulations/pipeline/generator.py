@@ -2,7 +2,7 @@
 
 from .imports import *
 from .config import *
-from Simulations._inp_modules import *
+from simulations._inp_modules import *
 
 class ParameterGenerator:
     """Gera a lista de combinações (Mesh Size x Length)."""

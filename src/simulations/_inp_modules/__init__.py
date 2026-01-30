@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from scripts.run_abaqus2 import AbaqusRunner
+
 
 print("_inp_modules is being imported...")
 

@@ -22,7 +22,7 @@ class ConfigurationManager:
 
         # Define caminhos padrão caso não existam no JSON
         # (Ajuste conforme sua estrutura real de pastas)
-        root = Path(__file__).parent.parent.parent  # Sobe até src/
+        root = Path(__file__).resolve().parents[3]
 
         self.config = SimulationConfig(
             # Directories
@@ -32,11 +32,11 @@ class ConfigurationManager:
 
             # Scripts (Tenta pegar do JSON ou assume padrão)
             geometry_script  = Path(d.get("geometry_script",
-                          root / "Simulations/tests/attempt.py")),
+                root / "src/simulations/cma/script.py")),
             polynomial_json_dir=Path(d.get("polynomial_json_dir",
-                root / "Preprocess/exp2/Sample_postprocess/Choosed_plane")),
+                root / "data/output/exp2/curve_data")),
             polynomial_json_default=Path(d.get("polynomial_json",
-                root / "Preprocess/exp1/Sample_postprocess/Choosed_plane/Avearege__5_rebuild.json")),
+                root / "data/output/exp1/surface_data/Average_Side1_Side2.json")),
             # Material
             elastic_modulus  = m.get("elastic_modulus", 210000.0),
             poisson_ratio    = m.get("poisson_ratio", 0.3),

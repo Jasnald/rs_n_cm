@@ -7,8 +7,13 @@ from pathlib import Path
 _here = Path(__file__).resolve().parent
 _src_root = _here.parent.parent
 
-from Exp_Data.s1_exp import CONFIG_PATH
-from _inp_modules import INPRunner
+
+CONFIG_PATH = _src_root / "data" / "config.json"
+
+print(f"{_src_root}")
+print(f"{CONFIG_PATH}")
+
+from _inp_modules import *
 from pipeline import *
 
 
