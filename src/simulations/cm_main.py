@@ -62,5 +62,5 @@ def main(default_process=True, convertion_process=True):
     print("✅ WORKFLOW CONCLUÍDO COM SUCESSO!")
 
 if __name__ == "__main__":
-    main(default_process=True,
+    main(default_process=False,
          convertion_process=True)

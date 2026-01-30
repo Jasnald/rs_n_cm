@@ -134,21 +134,19 @@ class OdbBatchConverter(object):
         Converte com segurança um texto para string ASCII para resolver questões de Unicode na API do Abaqus.
         """
         logger = logging.getLogger(__name__)
-        try:
-            if sys.version_info[0] == 2:
-                if isinstance(text, unicode):
-                    logger.info("Convertendo unicode para ASCII: {}".format(text))
-                    return text.encode('ascii', 'ignore')
-                else:
-                    return str(text)
+        if sys.version_info[0] == 2:
+            if isinstance(text, unicode):
+                logger.info("Convertendo unicode para ASCII: {}".format(text))
+                return text.encode('ascii', 'ignore')
             else:
-                if isinstance(text, bytes):
-                    logger.info("Convertendo bytes para ASCII: {}".format(text))
-                    return text.decode('ascii', 'ignore')
-                else:
-                    return str(text)
-        except Exception:
-            return str(text)
+                return str(text)
+        else:
+            if isinstance(text, bytes):
+                logger.info("Convertendo bytes para ASCII: {}".format(text))
+                return text.decode('ascii', 'ignore')
+            else:
+                return str(text)
+
 
     def find_odb_files(self, directory):
         """
@@ -275,7 +273,6 @@ class OdbBatchConverter(object):
             stress_threshold=self.conversion_params.get('stress_threshold', 1e-6),
             batch_size=self.conversion_params.get('batch_size', 1000),
             compression=False,
-            # Novos parâmetros para controle de frames
             begin_frame=begin_frame,
             end_frame=end_frame
         )

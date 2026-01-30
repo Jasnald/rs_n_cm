@@ -165,21 +165,17 @@ class OdbToNPYConverter(object):
             (None,              "Default")
         ]
         for pos, desc in strategies:
-            try:
-                fld = field_u if pos is None else field_u.getSubset(position=pos)
-                if not fld.values:
-                    continue
-                for v in fld.values:
-                    inst = v.instance.name
-                    nlab = getattr(v, 'nodeLabel', None)
-                    if inst and nlab:
-                        cache.setdefault(inst, {}).setdefault(nlab, []).append(v)
-                print("Displacement data found using: {} ({} values)".format(
-                    desc, len(fld.values)))
-                return cache
-            except Exception as e:
-                print("Displacement strategy '{}' failed: {}".format(desc, e))
+            fld = field_u if pos is None else field_u.getSubset(position=pos)
+            if not fld.values:
                 continue
+            for v in fld.values:
+                inst = v.instance.name
+                nlab = getattr(v, 'nodeLabel', None)
+                if inst and nlab:
+                    cache.setdefault(inst, {}).setdefault(nlab, []).append(v)
+            print("Displacement data found using: {} ({} values)".format(
+                desc, len(fld.values)))
+            return cache
 
         print("WARNING: no displacement strategy worked!")
         return cache
@@ -204,21 +200,17 @@ class OdbToNPYConverter(object):
             (None,              "Default")
         ]
         for pos, desc in strategies:
-            try:
-                fld = field_s if pos is None else field_s.getSubset(position=pos)
-                if not fld.values:
-                    continue
-                # sucesso – guardamos listas
-                for v in fld.values:
-                    inst = v.instance.name
-                    nlab = getattr(v, 'nodeLabel', None)
-                    if inst and nlab:
-                        cache.setdefault(inst, {}).setdefault(nlab, []).append(v)
-                print("Stress data found using: {} ({} values)".format(desc, len(fld.values)))
-                return cache
-            except Exception as e:
-                print("Strategy '{}' failed: {}".format(desc, e))
+            fld = field_s if pos is None else field_s.getSubset(position=pos)
+            if not fld.values:
                 continue
+            # sucesso – guardamos listas
+            for v in fld.values:
+                inst = v.instance.name
+                nlab = getattr(v, 'nodeLabel', None)
+                if inst and nlab:
+                    cache.setdefault(inst, {}).setdefault(nlab, []).append(v)
+            print("Stress data found using: {} ({} values)".format(desc, len(fld.values)))
+            return cache
 
         print("WARNING: no stress strategy worked!")
         return cache
@@ -373,6 +365,29 @@ class OdbToNPYConverter(object):
                 # Força limpeza de memória
                 gc.collect()
 
+    def stress_map(self):
+        _STRESS_MAP = (
+            (0, 0),  # S11
+            (4, 1),  # S22
+            (8, 2),  # S33
+            (1, 3), (3, 3),  # S12 -> (0,1) e (1,0)
+            (2, 4), (6, 4),  # S13
+            (5, 5), (7, 5),  # S23
+        )
+        return _STRESS_MAP
+
+    @staticmethod
+    def _get_nonempty_attr(obj, attr, default=None):
+        """
+        Retorna obj.<attr> se existir e tiver len>0 (quando aplicável),
+        senão retorna default.
+        """
+        val = getattr(obj, attr, default)
+        if val is None: return default
+        if len(val) == 0: return default
+
+        return val
+
     def _process_and_save_frame(self, frame, step_dir, frame_idx, global_node_count, instance_mapping):
         """
         VERSÃO OTIMIZADA: Usa os invariantes JÁ CALCULADOS pelo Abaqus
@@ -393,80 +408,79 @@ class OdbToNPYConverter(object):
         count_disp = np.zeros(global_node_count, dtype=np.float32)
         count_stress = np.zeros(global_node_count, dtype=np.float32)
 
-        # 2. DESLOCAMENTO (igual)
-        if 'U' in frame.fieldOutputs:
-            field_u = frame.fieldOutputs['U']
-
+        field_u = frame.fieldOutputs['U'] if 'U' in frame.fieldOutputs else None
+        if field_u is not None:
             for block in field_u.bulkDataBlocks:
-                inst_name = block.instance.name
-                if inst_name not in instance_mapping:
-                    continue
+                # Guard: bloco/instância inválidos
+                inst = getattr(block, "instance", None)
+                if not inst:continue
 
-                node_map = instance_mapping[inst_name]["node_mapping"]
-                block_data = block.data
-                block_labels = block.nodeLabels
+                inst_name = inst.name
+                inst_map = instance_mapping.get(inst_name)
+                if not inst_map:continue
 
-                if block_labels is None or block_data is None:
-                    continue
+                node_map = inst_map.get("node_mapping")
+                if not node_map:continue
+
+                block_labels = self._get_nonempty_attr(block, "nodeLabels")
+                block_data   = self._get_nonempty_attr(block, "data")
+
+                if block_labels is None or block_data is None: continue
 
                 get_idx = node_map.get
 
                 for i in xrange(len(block_labels)):
                     idx = get_idx(block_labels[i])
-                    if idx is not None:
-                        sum_disp[idx] += block_data[i]
-                        count_disp[idx] += 1.0
+                    if idx is None:continue
+
+                    sum_disp[idx]   += block_data[i]
+                    count_disp[idx] += 1.0
 
         # 3. TENSÃO (COM INVARIANTES DO ABAQUS!)
-        if 'S' in frame.fieldOutputs:
-            field_s = frame.fieldOutputs['S']
-
+        field_s = frame.fieldOutputs['S'] if 'S' in frame.fieldOutputs else None
+        if field_s is not None:
+            stress_map = self.stress_map()
             for block in field_s.bulkDataBlocks:
-                inst_name = block.instance.name
-                if inst_name not in instance_mapping:
-                    continue
 
-                node_map = instance_mapping[inst_name]["node_mapping"]
-                block_data = block.data
-                block_labels = block.nodeLabels
+                inst = getattr(block, "instance", None)
+                if not inst:continue
 
-                if block_labels is None or block_data is None:
-                    continue
+                inst_map = instance_mapping.get(inst.name)
+                if not inst_map:continue
 
-                # NOVO: Pega os invariantes do bloco
-                block_mises = getattr(block, 'mises', None)
-                block_max_p = getattr(block, 'maxPrincipal', None)
-                block_min_p = getattr(block, 'minPrincipal', None)
+                node_map = inst_map.get("node_mapping")
+                if not node_map:continue
+
+                block_labels = self._get_nonempty_attr(block, "nodeLabels")
+                block_data   = self._get_nonempty_attr(block, "data")
+
+                if block_labels is None or block_data is None: continue
+
+                block_mises  = self._get_nonempty_attr(block, "mises")
+                block_max_p  = self._get_nonempty_attr(block, "maxPrincipal")
+                block_min_p  = self._get_nonempty_attr(block, "minPrincipal")
+
 
                 get_idx = node_map.get
 
                 for i in xrange(len(block_labels)):
                     idx = get_idx(block_labels[i])
-                    if idx is not None:
-                        d = block_data[i]
+                    if idx is None:continue
+                    
+                    d = block_data[i]
 
-                        # Tensor (igual)
-                        sum_stress[idx, 0] += d[0]
-                        sum_stress[idx, 4] += d[1]
-                        sum_stress[idx, 8] += d[2]
-                        sum_stress[idx, 1] += d[3]
-                        sum_stress[idx, 3] += d[3]
-                        sum_stress[idx, 2] += d[4]
-                        sum_stress[idx, 6] += d[4]
-                        sum_stress[idx, 5] += d[5]
-                        sum_stress[idx, 7] += d[5]
+                    row = sum_stress[idx]
+                    for out_i, in_i in stress_map:
+                        row[out_i] += d[in_i]
 
-                        # INVARIANTES JÁ CALCULADOS (GRÁTIS!)
-                        if block_mises is not None:
-                            sum_mises[idx] += block_mises[i]
+                    if block_mises is not None:
+                        sum_mises[idx] += block_mises[i]
+                    if block_max_p is not None:
+                        sum_max_principal[idx] += block_max_p[i]
+                    if block_min_p is not None:
+                        sum_min_principal[idx] += block_min_p[i]
 
-                        if block_max_p is not None:
-                            sum_max_principal[idx] += block_max_p[i]
-
-                        if block_min_p is not None:
-                            sum_min_principal[idx] += block_min_p[i]
-
-                        count_stress[idx] += 1.0
+                    count_stress[idx] += 1.0
 
         # 4. MÉDIAS
         np.maximum(count_disp, 1.0, out=count_disp)
