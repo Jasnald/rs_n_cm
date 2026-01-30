@@ -96,12 +96,9 @@ class OdbToNPYConverter(object):
             print("ERROR: ODB file not found: {}".format(odb_full_path))
             return
         
-        try:
-            odb = openOdb(odb_full_path, readOnly=True)
-            print("ODB opened successfully")
-        except Exception as e:
-            print("Error opening ODB: {}".format(str(e)))
-            return
+        odb = openOdb(odb_full_path, readOnly=True)
+        print("ODB opened successfully")
+
         
         try:
             # 1) Extrai a geometria e topologia agregando os dados das instâncias selecionadas
@@ -305,12 +302,7 @@ class OdbToNPYConverter(object):
                 conn = elem.connectivity
                 if len(conn) < self.mesh_conner:
                     continue
-                try:
-                    # USA O MAPEAMENTO: label -> índice global
-                    mapped = [node_map[nlabel] for nlabel in conn[:self.mesh_conner]]
-                except KeyError as e:
-                    print("Error: Node label {} not found in instance {}".format(e, inst_name))
-                    continue
+                mapped = [node_map[nlabel] for nlabel in conn[:self.mesh_conner]]
                 
                 connectivity.extend(mapped)
                 element_types.append(self.mesh_type)
