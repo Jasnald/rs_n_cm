@@ -31,7 +31,7 @@ class GeometrySetter(LoggerMixin):
         h_thickness = t_dims['h_thickness']
         v_width     = t_dims['v_width']
         v_height    = t_dims['v_height']
-        v_pos_x     = h_width - t_dims['offset_1'] - t_dims['offset_2']
+        v_pos_x     = t_dims['offset_1']
         
         # Definir pontos do contorno T em sentido anti-horário
         points = [

@@ -168,42 +168,57 @@ class OdbBatchConverter(object):
         """
         Inspeciona um arquivo ODB para determinar os steps e instâncias disponíveis, registrando a estrutura.
         """
-        try:
-            from odbAccess import openOdb
-            message = "Inspecionando estrutura do ODB: {}\n".format(os.path.basename(odb_file))
-            odb_file_safe = self.safe_str_convert(odb_file)
-            odb = openOdb(odb_file_safe, readOnly=True)
-            rootassembly = odb.rootAssembly
-            instances_obj = rootassembly.instances
-            steps_obj = odb.steps
+        from odbAccess import openOdb
+        message = "Inspecionando estrutura do ODB: {}\n".format(os.path.basename(odb_file))
+        odb_file_safe = self.safe_str_convert(odb_file)
+        odb = openOdb(odb_file_safe, readOnly=True)
+        rootassembly = odb.rootAssembly
+        instances_obj = rootassembly.instances
+        steps_obj = odb.steps
 
-            instance_names = list(instances_obj.keys())
-            step_names = list(steps_obj.keys())
+        instance_names = list(instances_obj.keys())
+        step_names = list(steps_obj.keys())
 
-            message += "  Steps disponíveis ({} no total):\n".format(len(step_names))
-            for i, step_name in enumerate(step_names):
-                frames_count = len(steps_obj[step_name].frames)
-                message += "    [{}] {} ({} frames)\n".format(i, step_name, frames_count)
+        message += "  Steps disponíveis ({} no total):\n".format(len(step_names))
+        for i, step_name in enumerate(step_names):
+            frames_count = len(steps_obj[step_name].frames)
+            message += "    [{}] {} ({} frames)\n".format(i, step_name, frames_count)
 
-            message += "  Instâncias disponíveis ({} no total):\n".format(len(instance_names))
-            for i, inst_name in enumerate(instance_names):
-                n_nodes = len(instances_obj[inst_name].nodes)
-                n_elements = len(instances_obj[inst_name].elements)
-                message += "    [{}] {} ({} nós, {} elementos)\n".format(i, inst_name, n_nodes, n_elements)
+        message += "  Instâncias disponíveis ({} no total):\n".format(len(instance_names))
+        for i, inst_name in enumerate(instance_names):
+            n_nodes = len(instances_obj[inst_name].nodes)
+            n_elements = len(instances_obj[inst_name].elements)
+            message += "    [{}] {} ({} nós, {} elementos)\n".format(i, inst_name, n_nodes, n_elements)
 
-            odb.close()
-            self.logger.info(message)
+        odb.close()
+        self.logger.info(message)
 
-            return {
-                'steps': len(step_names),
-                'instances': len(instance_names),
-                'step_names': step_names,
-                'instance_names': instance_names
-            }
+        return {
+            'steps': len(step_names),
+            'instances': len(instance_names),
+            'step_names': step_names,
+            'instance_names': instance_names
+        }
 
-        except Exception as e:
-            self.logger.error("Erro inspecionando o ODB {}: {}".format(os.path.basename(odb_file), str(e)))
-            return None
+    def last_frame_index(self, odb_file):
+        piecenum    = self.conversion_params.get("Piecenum", "1")
+        steps_param = "0"
+        instances_param = "0"
+
+        if not self.conversion_params.get("inspect_first", True):
+            return steps_param, instances_param 
+
+        structure = self.inspect_odb_structure(odb_file)
+        if not structure:
+            return steps_param, instances_param  
+
+        steps_param = "all"
+        if str(piecenum) == "1":
+            instances_param = "0"
+        else:
+            instances_param = "all"
+
+        return steps_param, instances_param
 
     def convert_single_odb(self, odb_file, output_folder):
         """
@@ -214,80 +229,60 @@ class OdbBatchConverter(object):
             file=os.path.basename(odb_file))
         self.logger.info(header)
 
-        try:
-            # Interpretar parâmetros legacy
-            begin_frame = self.conversion_params.get('BeginFrame', '-1')
-            end_frame = self.conversion_params.get('EndFrame', '-1') 
-            piecenum = self.conversion_params.get('Piecenum', '1')
-            
-            if self.conversion_params.get('inspect_first', True):
-                structure = self.inspect_odb_structure(odb_file)
-                if structure:
-                    # Determinar steps (sempre todos por enquanto)
-                    steps_param = 'all'
-                    
-                    # Determinar instances baseado em Piecenum
-                    if piecenum == '1' or piecenum == 1:
-                        instances_param = '0'  # Primeira instância apenas
-                    else:
-                        instances_param = 'all'
-                else:
-                    steps_param = '0'
-                    instances_param = '0'
-            else:
-                steps_param = '0'
-                instances_param = '0'
+        # Interpretar parâmetros legacy
+        begin_frame = self.conversion_params.get('BeginFrame', '-1')
+        end_frame = self.conversion_params.get('EndFrame', '-1') 
 
-            # Converter parâmetros de frame para o formato do conversor
-            frame_params = self._convert_frame_params(begin_frame, end_frame)
+        steps_param, instances_param = self.last_frame_index(odb_file)
 
-            odb_path = os.path.dirname(odb_file)
-            odb_basename = os.path.splitext(os.path.basename(odb_file))[0]
+        # Converter parâmetros de frame para o formato do conversor
+        frame_params = self._convert_frame_params(begin_frame, end_frame)
 
-            odb_path_safe = self.safe_str_convert(odb_path)
-            odb_basename_safe = self.safe_str_convert(odb_basename)
-            output_folder_safe = self.safe_str_convert(output_folder)
+        odb_path = os.path.dirname(odb_file)
+        odb_basename = os.path.splitext(os.path.basename(odb_file))[0]
 
-            params_message = ("\nIniciando conversão...\n"
-                            "Parâmetros:\n"
-                            "  - Mesh Type: {mesh}\n"
-                            "  - Steps: {steps}\n"
-                            "  - Instances: {instances}\n"
-                            "  - BeginFrame: {begin_f}\n"
-                            "  - EndFrame: {end_f}\n"
-                            "  - ODB Path: {odb_path}\n"
-                            "  - ODB Name: {odb_name}\n"
-                            "  - Output Path: {output}"
-                            ).format(mesh=self.conversion_params.get('MeshType'),
-                                    steps=steps_param,
-                                    instances=instances_param,
-                                    begin_f=begin_frame,
-                                    end_f=end_frame,
-                                    odb_path=odb_path_safe,
-                                    odb_name=odb_basename_safe,
-                                    output=output_folder_safe)
-            self.logger.info(params_message)
+        odb_path_safe = self.safe_str_convert(odb_path)
+        odb_basename_safe = self.safe_str_convert(odb_basename)
+        output_folder_safe = self.safe_str_convert(output_folder)
 
-            converter = OdbToNPYConverter(
-                odb_path=odb_path_safe,
-                odb_name=odb_basename_safe,
-                output_path=output_folder_safe,
-                mesh_type=self.conversion_params.get('MeshType', '12'),
-                steps=steps_param,
-                instances=instances_param,
-                stress_threshold=self.conversion_params.get('stress_threshold', 1e-6),
-                batch_size=self.conversion_params.get('batch_size', 1000),
-                compression=False,
-                # Novos parâmetros para controle de frames
-                begin_frame=begin_frame,
-                end_frame=end_frame
-            )
+        params_message = ("\nIniciando conversão...\n"
+                        "Parâmetros:\n"
+                        "  - Mesh Type: {mesh}\n"
+                        "  - Steps: {steps}\n"
+                        "  - Instances: {instances}\n"
+                        "  - BeginFrame: {begin_f}\n"
+                        "  - EndFrame: {end_f}\n"
+                        "  - ODB Path: {odb_path}\n"
+                        "  - ODB Name: {odb_name}\n"
+                        "  - Output Path: {output}"
+                        ).format(mesh=self.conversion_params.get('MeshType'),
+                                steps=steps_param,
+                                instances=instances_param,
+                                begin_f=begin_frame,
+                                end_f=end_frame,
+                                odb_path=odb_path_safe,
+                                odb_name=odb_basename_safe,
+                                output=output_folder_safe)
+        self.logger.info(params_message)
 
-            converter.convert()
-            self.logger.info("\nConversão concluída com sucesso para: {}".format(os.path.basename(odb_file)))
-        except Exception as e:
-            self.logger.error("\nErro convertendo {}: {}\nDetalhes: {}".format(
-                os.path.basename(odb_file), str(e), repr(e)))
+        converter = OdbToNPYConverter(
+            odb_path=odb_path_safe,
+            odb_name=odb_basename_safe,
+            output_path=output_folder_safe,
+            mesh_type=self.conversion_params.get('MeshType', '12'),
+            steps=steps_param,
+            instances=instances_param,
+            stress_threshold=self.conversion_params.get('stress_threshold', 1e-6),
+            batch_size=self.conversion_params.get('batch_size', 1000),
+            compression=False,
+            # Novos parâmetros para controle de frames
+            begin_frame=begin_frame,
+            end_frame=end_frame
+        )
+
+        converter.convert()
+        self.logger.info("\nConversão concluída com sucesso para: {}".format(os.path.basename(odb_file)))
+
             
     def _convert_frame_params(self, begin_frame, end_frame):
         """
